@@ -73,6 +73,7 @@ export class RokuService {
   async powerOff(id) {
     const client = this.#clients[id];
     if (!client) throw new Error("Device is not currently discovered");
+    await client.keypress(Keys.HOME.command);
     await client.keypress(Keys.POWER_OFF.command);
   }
 }
