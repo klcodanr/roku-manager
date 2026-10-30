@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Roku Manager</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <main>
+      <header class="site-header">
+        <a class="brand" href="/" data-link>Roku Manager</a>
+        <nav aria-label="Main navigation">
+          <a href="/" data-link>Devices</a>
+          <button id="refresh" class="secondary" type="button">Refresh</button>
+        </nav>
+      </header>
+      <div id="app" aria-live="polite"></div>
+    </main>
+    <script type="module" src="/script.js"></script>
+  </body>
+</html>
