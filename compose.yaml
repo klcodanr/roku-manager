@@ -1,0 +1,25 @@
+services:
+  roku-manager:
+    build: .
+    # SSDP discovery needs the host's LAN interface and multicast route.
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      DATA_FILE: /app/data/state.json
+      EVENT_LOG_DIR: /app/data/events
+    volumes:
+      - roku-manager-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  roku-manager-data:

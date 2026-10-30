@@ -1,0 +1,33 @@
+{
+  "name": "roku-manager",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small web UI and API for managing Roku usage limits.",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "test": "node --test",
+    "lint": "oxlint src public test",
+    "format": "oxfmt src public test --write",
+    "format:check": "oxfmt src public test --check"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "hono": "^4.7.2",
+    "hono-pino": "^0.10.3",
+    "pino": "^9.6.0",
+    "roku-client": "^6.0.0",
+    "rotating-file-stream": "^3.2.10"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "supertest": "^7.1.1",
+    "typescript": "^7.0.2"
+  }
+}
