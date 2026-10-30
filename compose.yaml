@@ -3,8 +3,6 @@ services:
     build: .
     # SSDP discovery needs the host's LAN interface and multicast route.
     network_mode: host
-    env_file:
-      - .env
     environment:
       DATA_FILE: /app/data/state.json
       EVENT_LOG_DIR: /app/data/events
