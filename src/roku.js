@@ -61,7 +61,7 @@ export class RokuService {
         const id = this.#toId(client.ip);
         try {
           const [info, active] = await Promise.all([client.info(), client.active()]);
-          return { id, ip: client.ip.toString(), info, active };
+          return { id, ip: client.ip.toString(), info, canPowerOff: canPowerOff(info), active };
         } catch (error) {
           logger.warn({ err: error, id }, "Unable to query Roku device");
           return { id, ip: client.ip.toString(), error: error.message };
@@ -70,10 +70,25 @@ export class RokuService {
     );
   }
 
-  async powerOff(id) {
+  /**
+   * @param {string} id
+   * @param {(import('roku-client').RokuDeviceInfo & { supportsTvPowerControl?: boolean }) | undefined} info
+   * @returns {Promise<"powered_off" | "returned_home">}
+   */
+  async powerOff(id, info) {
     const client = this.#clients[id];
     if (!client) throw new Error("Device is not currently discovered");
-    await client.keypress(Keys.HOME.command);
+    const deviceInfo = info ?? (await client.info());
+    if (!canPowerOff(deviceInfo)) {
+      await client.keypress(Keys.HOME.command);
+      return "returned_home";
+    }
     await client.keypress(Keys.POWER_OFF.command);
+    return "powered_off";
   }
+}
+
+/** @param {(import('roku-client').RokuDeviceInfo & { supportsTvPowerControl?: boolean }) | undefined} info */
+function canPowerOff(info) {
+  return Boolean(info?.isTv || info?.supportsTvPowerControl);
 }

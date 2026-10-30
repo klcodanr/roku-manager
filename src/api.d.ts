@@ -3,7 +3,8 @@ import { RokuDeviceInfo, RokuApp } from "roku-client";
 export interface RokuDevice {
   id: string;
   ip: string;
-  info?: RokuDeviceInfo;
+  info?: RokuDeviceInfo & { supportsTvPowerControl?: boolean };
+  canPowerOff?: boolean;
   active?: RokuApp | null;
   error?: string;
 }

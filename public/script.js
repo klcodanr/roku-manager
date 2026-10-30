@@ -195,6 +195,9 @@ function deviceCard(device) {
         ? [text("Currently active: "), el("strong", { text: device.active.name })]
         : [text("No active app reported")],
     ),
+    el("p", { class: "muted" }, [
+      text(device.canPowerOff ? "Can power off" : "Cannot power off; enforcement returns to Home"),
+    ]),
     manage,
     details,
   ]);
@@ -302,7 +305,7 @@ function renderManage(id) {
       el("h1", { text: name }),
       el("p", { class: "muted", text: device.ip }),
     ]),
-    sessionSummary(session),
+    sessionSummary(session, id),
     form,
     historySection(state.events[id]),
   );
@@ -461,8 +464,8 @@ function eventRow(event) {
   ]);
 }
 
-/** @param {SessionSummary} session @returns {HTMLElement} */
-function sessionSummary(session) {
+/** @param {SessionSummary} session @param {string} id @returns {HTMLElement} */
+function sessionSummary(session, id) {
   const actual =
     session.actual.state === "active"
       ? `Playing ${session.actual.appName}`
@@ -511,6 +514,20 @@ function sessionSummary(session) {
       session.enforcement.detail
         ? el("p", { class: "session-detail status-failure", text: session.enforcement.detail })
         : null,
+    ]),
+    el("div", { class: "form-actions session-actions" }, [
+      el("button", {
+        type: "button",
+        text: "Run enforcement",
+        dataset: { action: "run-enforcement", deviceId: id },
+      }),
+      el("button", {
+        class: "secondary",
+        type: "button",
+        text: "Reset session",
+        dataset: { action: "reset-session", deviceId: id },
+      }),
+      el("span", { class: "form-message", dataset: { enforcementMessage: "" } }),
     ]),
   ]);
 }
@@ -580,7 +597,51 @@ document.addEventListener("click", (event) => {
   if (action === "add-window" && form) form.querySelector("[data-windows]")?.append(windowRow());
   if (action === "remove-window") target.closest(".window")?.remove();
   if (action === "reset-settings" && form instanceof HTMLFormElement) resetSettings(form);
+  if (action === "run-enforcement") runEnforcement(actionElement);
+  if (action === "reset-session") resetSession(actionElement);
 });
+
+/** @param {HTMLElement | null} actionElement */
+async function runEnforcement(actionElement) {
+  if (!actionElement) return;
+  const id = actionElement.dataset.deviceId;
+  const message = actionElement
+    .closest(".session-summary")
+    ?.querySelector("[data-enforcement-message]");
+  if (!id || !(message instanceof HTMLElement)) throw new Error("Enforcement controls are missing");
+  actionElement.setAttribute("disabled", "true");
+  message.textContent = "Running enforcement...";
+  try {
+    await request("/api/enforce", { method: "POST" });
+    delete state.sessions[id];
+    delete state.events[id];
+    await loadDevices(true);
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : String(error);
+    actionElement.removeAttribute("disabled");
+  }
+}
+
+/** @param {HTMLElement | null} actionElement */
+async function resetSession(actionElement) {
+  if (!actionElement) return;
+  const id = actionElement.dataset.deviceId;
+  if (!id || !window.confirm("Reset this session's usage and lockout state?")) return;
+  const message = actionElement
+    .closest(".session-summary")
+    ?.querySelector("[data-enforcement-message]");
+  if (!(message instanceof HTMLElement)) throw new Error("Session controls are missing");
+  actionElement.setAttribute("disabled", "true");
+  message.textContent = "Resetting session...";
+  try {
+    await request(`/api/devices/${encodeURIComponent(id)}/session`, { method: "DELETE" });
+    delete state.sessions[id];
+    render();
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : String(error);
+    actionElement.removeAttribute("disabled");
+  }
+}
 
 /** @param {HTMLFormElement} form */
 async function resetSettings(form) {

@@ -2,7 +2,7 @@ import rootLogger from "./logger.js";
 /** @typedef {import('./api').RokuDevice} RokuDevice */
 /** @typedef {import('./api').DeviceSettings} DeviceSettings */
 /** @typedef {import('./api').EnforcementSession} EnforcementSession */
-/** @typedef {{ list: () => Promise<RokuDevice[]>, powerOff: (id: string) => Promise<void> }} RokuService */
+/** @typedef {{ list: () => Promise<RokuDevice[]>, powerOff: (id: string, info?: RokuDevice['info']) => Promise<"powered_off" | "returned_home"> }} RokuService */
 /** @typedef {{ getSettings: (id: string) => DeviceSettings, getSession: (id: string) => EnforcementSession | undefined, setSession: (id: string, session: EnforcementSession) => Promise<void> }} EnforcementStore */
 /** @typedef {{ append: (event: Record<string, unknown>) => Promise<void> }} EventLog */
 /** @typedef {{ roku: RokuService, store: EnforcementStore, eventLog?: EventLog, clock?: () => Date }} EnforcerOptions */
@@ -110,8 +110,13 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
         { deviceId: device.id, blocked, locked, limitReached },
         "Enforcing device limits",
       );
-      await roku.powerOff(device.id);
-      action = blocked ? "powered_off_blocked_time" : "powered_off_daily_limit";
+      const powerAction = await roku.powerOff(device.id, device.info);
+      action =
+        powerAction === "returned_home"
+          ? "returned_home"
+          : blocked
+            ? "powered_off_blocked_time"
+            : "powered_off_daily_limit";
       session.enforcementFailed = false;
       session.enforcementError = null;
     } catch (error) {

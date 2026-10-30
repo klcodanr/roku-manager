@@ -54,6 +54,10 @@ export const startServer = ({ roku, store, enforce, eventLog }) => {
     const device = (await roku.list()).find((item) => item.id === id);
     return c.json(getSessionSummary(store, id, device, new Date()));
   });
+  app.delete("/api/devices/:id/session", async (c) => {
+    await store.resetSession(c.req.param("id"));
+    return c.json({ ok: true });
+  });
   app.get("/api/devices/:id/events", async (c) => {
     const allEvents = await eventLog.readAll(c.req.param("id"));
     return c.json({ events: allEvents.slice(-10), metrics: summarizeEvents(allEvents) });

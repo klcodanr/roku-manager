@@ -80,6 +80,15 @@ export class Store {
 
   /**
    * @param {string} id
+   * @returns {Promise<void>}
+   */
+  async resetSession(id) {
+    delete this.#state.sessions[id];
+    await this.save();
+  }
+
+  /**
+   * @param {string} id
    * @returns {import('./api').EnforcementSession | undefined}
    */
   getSession(id) {
