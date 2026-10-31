@@ -146,6 +146,14 @@ test("treats native-ui as inactive", async () => {
   assert.equal(fixtureState.getSession().usedSeconds, 0);
 });
 
+test("treats Roku Dynamic Menu as inactive", async () => {
+  const fixtureState = fixture({ activeApp: "Roku Dynamic Menu", maxMinutes: 0 });
+  await fixtureState.enforce();
+
+  assert.equal(fixtureState.getPowerOffAttempts(), 0);
+  assert.equal(fixtureState.getSession().usedSeconds, 0);
+});
+
 test("reloads saved settings", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "roku-manager-"));
   const store = new Store(path.join(directory, "state.json"));

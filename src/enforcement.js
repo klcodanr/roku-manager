@@ -66,7 +66,12 @@ function toMinutes(value) {
 /** @param {{ device: RokuDevice, roku: RokuService, store: EnforcementStore, eventLog?: EventLog, now: Date }} options @returns {Promise<EnforcementResult>} */
 async function enforceDevice({ device, roku, store, eventLog, now }) {
   const settings = store.getSettings(device.id);
-  const active = Boolean(device.active && device.active.id !== "native-ui");
+  const active = Boolean(
+    device.active &&
+    device.active.id !== "native-ui" &&
+    device.active.id !== "Roku Dynamic Menu" &&
+    device.active.name !== "Roku Dynamic Menu",
+  );
   const today = localDateKey(now);
   const previous = store.getSession(device.id);
   const session =
