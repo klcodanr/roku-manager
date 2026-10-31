@@ -34,12 +34,14 @@ On Docker Desktop, publish port `3000` and ensure the container can reach the LA
 ```sh
 cp .env.example .env
 # Set AUTH_PASSWORD in .env before exposing the service.
-docker compose up -d --build
+docker compose up -d
 ```
 
-The Compose service uses host networking so SSDP discovery can reach Roku devices on the LAN, stores application data in the `roku-manager-data` volume, restarts automatically, and includes a health check. Open `http://localhost:3000`. Stop it with `docker compose down`; add `-v` only when you also want to remove the persisted data.
+The Compose service pulls `ghcr.io/klcodanr/roku-manager:latest`, uses host networking so SSDP discovery can reach Roku devices on the LAN, stores application data in the `roku-manager-data` volume, restarts automatically, and includes a health check. Open `http://localhost:3000`. Stop it with `docker compose down`; add `-v` only when you also want to remove the persisted data.
 
 Host networking is supported reliably on Linux. Docker Desktop runs containers inside a VM, and its multicast behavior varies by version and configuration; if discovery still returns no devices on macOS or Windows, run the manager directly on the host or use a Linux host/VM on the same LAN. The default bridge network is not sufficient for Roku SSDP discovery.
+
+Releases are created automatically from commits pushed to `main` using semantic-release. Use Conventional Commit prefixes such as `fix:` for patch releases, `feat:` for minor releases, and `BREAKING CHANGE:` for major releases. Each release publishes a versioned image and updates the `latest` image in GHCR.
 
 ## API
 

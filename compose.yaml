@@ -1,6 +1,6 @@
 services:
   roku-manager:
-    build: .
+    image: ghcr.io/klcodanr/roku-manager:latest
     # SSDP discovery needs the host's LAN interface and multicast route.
     network_mode: host
     environment:
