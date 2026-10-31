@@ -17,7 +17,6 @@ try {
 const logger = rootLogger.child({ module: "app" });
 
 logger.info("Starting Roku Manager");
-const store = new Store(process.env.DATA_FILE || path.join(root, "..", "data", "state.json"));
 const eventLog = new EventLog(
   process.env.EVENT_LOG_DIR || path.join(root, "..", "data", "events"),
   {
@@ -25,11 +24,13 @@ const eventLog = new EventLog(
     maxFiles: Number(process.env.EVENT_LOG_MAX_FILES || 3),
   },
 );
+const store = new Store(process.env.DATA_FILE || path.join(root, "..", "data", "state.json"));
 
 await store.load();
 const roku = new RokuService({ store });
 const enforce = createEnforcer({ roku, store, eventLog });
 const stopDiscovery = roku.startDiscovery(Number(process.env.DISCOVERY_INTERVAL_MS || 21_600_000));
+await migrateDeviceIdentities();
 const stopEnforcement = startEnforcement(enforce, {
   intervalMs: Number(process.env.CHECK_INTERVAL_MS || 15_000),
   logger,
@@ -45,3 +46,12 @@ const shutdown = async () => {
 };
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
+
+async function migrateDeviceIdentities() {
+  if (process.env.MIGRATE_DATA !== "DEVICE_IDS") return;
+
+  for (const { clientId, deviceId } of await roku.deviceIdentities()) {
+    await store.migrateDevice(clientId, deviceId);
+    await eventLog.migrateDevice(clientId, deviceId);
+  }
+}

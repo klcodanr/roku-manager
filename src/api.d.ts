@@ -1,7 +1,8 @@
 import { RokuDeviceInfo, RokuApp } from "roku-client";
 
 export interface RokuDevice {
-  id: string;
+  clientId: string;
+  deviceId: string;
   ip: string;
   info?: RokuDeviceInfo & { supportsTvPowerControl?: boolean };
   canPowerOff?: boolean;
@@ -21,7 +22,7 @@ export interface BlockWindow {
 }
 
 export interface DeviceSettings {
-  id: string;
+  deviceId: string;
   maxMinutes: number | null;
   blockedWindows: Array<BlockWindow>;
   limitBehavior: "rest_of_day" | "cooldown";

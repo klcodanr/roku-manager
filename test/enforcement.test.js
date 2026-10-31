@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createEnforcer } from "../src/enforcement.js";
-import { EventLog } from "../src/event-log.js";
+import { EventLog, safeDeviceId } from "../src/event-log.js";
 import { Store } from "../src/store.js";
 
 function fixture({
@@ -16,12 +16,16 @@ function fixture({
   failPowerOff = false,
 } = {}) {
   let now = new Date("2026-10-30T12:00:00");
-  let device = { id: "roku-1", active: active ? { id: activeApp, name: activeApp } : null };
+  let device = {
+    clientId: "roku-1",
+    deviceId: "roku-1",
+    active: active ? { id: activeApp, name: activeApp } : null,
+  };
   let session;
   let powerOffAttempts = 0;
   const store = {
     getSettings: () => ({
-      id: "roku-1",
+      deviceId: "roku-1",
       maxMinutes,
       blockedWindows: [],
       limitBehavior,
@@ -121,7 +125,7 @@ test("resetSettings clears policy and usage state", async () => {
   const store = new Store(path.join(directory, "state.json"));
   await store.load();
   await store.setSettings("roku-1", {
-    id: "roku-1",
+    deviceId: "roku-1",
     maxMinutes: 30,
     blockedWindows: [],
     limitBehavior: "rest_of_day",
@@ -159,7 +163,7 @@ test("reloads saved settings", async () => {
   const store = new Store(path.join(directory, "state.json"));
   await store.load();
   await store.setSettings("roku-1", {
-    id: "roku-1",
+    deviceId: "roku-1",
     maxMinutes: 30,
     blockedWindows: [],
     limitBehavior: "cooldown",
@@ -176,12 +180,14 @@ test("records device state and enforcement outcome for every check", async () =>
   const loggedEvents = [];
   const enforce = createEnforcer({
     roku: {
-      list: async () => [{ id: "roku-1", active: { id: "YouTube", name: "YouTube" } }],
+      list: async () => [
+        { clientId: "roku-1", deviceId: "roku-1", active: { id: "YouTube", name: "YouTube" } },
+      ],
       powerOff: async () => {},
     },
     store: {
       getSettings: () => ({
-        id: "roku-1",
+        deviceId: "roku-1",
         maxMinutes: 0,
         blockedWindows: [],
         limitBehavior: "cooldown",
@@ -207,6 +213,51 @@ test("records device state and enforcement outcome for every check", async () =>
     usedMinutes: 0,
     lockedUntil: "2026-10-30T12:02:00.000Z",
   });
+});
+
+test("uses the stable device ID for sessions and events while controlling the client ID", async () => {
+  let session;
+  const events = [];
+  const roku = {
+    list: async () => [
+      {
+        clientId: "ip-client",
+        deviceId: "stable-device",
+        active: { id: "YouTube", name: "YouTube" },
+        info: { deviceId: "stable-device" },
+      },
+    ],
+    powerOff: async (id) => assert.equal(id, "ip-client"),
+  };
+  const store = {
+    getSettings: (id) => {
+      assert.equal(id, "stable-device");
+      return {
+        deviceId: id,
+        maxMinutes: 0,
+        blockedWindows: [],
+        limitBehavior: "cooldown",
+        cooldownMinutes: 2,
+      };
+    },
+    getSession: (id) => {
+      assert.equal(id, "stable-device");
+      return session;
+    },
+    setSession: async (id, value) => {
+      assert.equal(id, "stable-device");
+      session = value;
+    },
+  };
+
+  await createEnforcer({
+    roku,
+    store,
+    eventLog: { append: async (event) => events.push(event) },
+    clock: () => new Date("2026-10-30T12:00:00Z"),
+  })();
+
+  assert.equal(events[0].deviceId, "stable-device");
 });
 
 test("writes each device to a separate event log", async () => {
@@ -279,4 +330,33 @@ test("caches full history and invalidates it after append", async () => {
   );
 
   await eventLog.close();
+});
+
+test("migrates only the old device files and renames them", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "roku-manager-"));
+  const eventLog = new EventLog(directory);
+
+  await eventLog.append({ deviceId: "old-client", event: "old" });
+  await eventLog.append({ deviceId: "other-device", event: "other" });
+  await eventLog.close();
+
+  await eventLog.migrateDevice("old-client", "stable-device");
+
+  assert.deepEqual(
+    (await eventLog.readAll("stable-device")).map((event) => event.event),
+    ["old"],
+  );
+  assert.deepEqual(
+    (await eventLog.readAll("other-device")).map((event) => event.event),
+    ["other"],
+  );
+  const files = await fs.readdir(directory);
+  assert.equal(
+    files.some((file) => file.includes(safeDeviceId("old-client"))),
+    false,
+  );
+  assert.equal(
+    files.some((file) => file.includes(safeDeviceId("stable-device"))),
+    true,
+  );
 });

@@ -3,6 +3,7 @@
     "checkJs": true,
     "allowJs": true,
     "noEmit": true,
+    "maxNodeModuleJsDepth": 0,
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
