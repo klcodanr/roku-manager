@@ -6,6 +6,7 @@ services:
     environment:
       DATA_FILE: /app/data/state.json
       EVENT_LOG_DIR: /app/data/events
+      TZ: ${TZ:-America/New_York}
       PORT: ${APP_PORT}
       AUTH_PASSWORD: ${AUTH_PASSWORD}
       LOG_LEVEL: ${LOG_LEVEL}

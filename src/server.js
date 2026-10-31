@@ -44,6 +44,12 @@ export const startServer = ({ roku, store, enforce, eventLog }) => {
   const publicRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "../public");
   app.use("/*", serveStatic({ root: publicRoot }));
   app.get("/health", (c) => c.json({ ok: true }));
+  app.get("/api/server-time", (c) =>
+    c.json({
+      now: new Date().toISOString(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
+  );
   app.get("/api/devices", async (c) => {
     const devices = await roku.list(c.req.query("refresh") === "true");
     return c.json({ devices });
