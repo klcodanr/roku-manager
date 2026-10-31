@@ -168,7 +168,17 @@ function renderDevices() {
   const heading = el("div", { class: "page-heading" }, [
     el("p", { class: "eyebrow", text: "Overview" }),
     el("h1", { text: "Devices" }),
-    el("p", { class: "muted", text: "Roku devices discovered on your network." }),
+  ]);
+  const addForm = el("form", { class: "card add-device-form", dataset: { addDeviceForm: "" } }, [
+    el("h2", { text: "Add a device by IP" }),
+    el("label", {}, [
+      text("Roku IP address"),
+      el("input", { name: "ip", type: "text", placeholder: "192.168.1.17", required: true }),
+    ]),
+    el("div", { class: "form-actions" }, [
+      el("button", { type: "submit", text: "Add device" }),
+      el("span", { class: "form-message", dataset: { addDeviceMessage: "" } }),
+    ]),
   ]);
   const content = state.devices.length
     ? el("div", { class: "grid" }, state.devices.map(deviceCard))
@@ -177,7 +187,7 @@ function renderDevices() {
           text: "No Roku devices found. Confirm network access is enabled on the Roku and that the container can access the LAN.",
         }),
       ]);
-  app.append(heading, content);
+  app.append(heading, content, addForm);
 }
 
 /** @param {Device} device */
@@ -685,6 +695,25 @@ async function resetSettings(form) {
 document.addEventListener("submit", async (event) => {
   const form = event.target instanceof HTMLFormElement ? event.target : null;
   if (!form) return;
+  if (form.matches("[data-add-device-form]")) {
+    event.preventDefault();
+    const input = form.querySelector('[name="ip"]');
+    const message = form.querySelector("[data-add-device-message]");
+    if (!(input instanceof HTMLInputElement) || !(message instanceof HTMLElement)) return;
+    message.textContent = "Adding...";
+    try {
+      await request("/api/devices", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ip: input.value.trim() }),
+      });
+      input.value = "";
+      await loadDevices();
+    } catch (error) {
+      message.textContent = error instanceof Error ? error.message : String(error);
+    }
+    return;
+  }
   if (!form.matches("[data-device-form]")) return;
   event.preventDefault();
   const message = form.querySelector("[data-message]");

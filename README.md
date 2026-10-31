@@ -14,6 +14,18 @@ npm start
 
 Open `http://localhost:3000` and authenticate with the values in `.env`. Settings are stored in `data/state.json` by default. If no `.env` or `AUTH_PASSWORD` is provided, local development uses `admin` / `change-me`; set a real password before exposing the service.
 
+## Direct Roku SSDP discovery
+
+The standalone CLI sends a raw SSDP `M-SEARCH` request directly to the LAN multicast address. It does not use the Roku Manager server or its API:
+
+```sh
+npm run ssdp
+npm run ssdp -- --json --timeout 10000
+npm run ssdp -- --st ssdp:all --interface en0
+```
+
+The default search target is Roku's `roku:ecp`. Use `npm run ssdp -- --help` for all request and network options.
+
 ## Docker
 
 The image is based on `node:22-alpine` and runs as the non-root `node` user. Roku SSDP discovery needs access to the local network; host networking is the most reliable option on Linux:
@@ -48,13 +60,15 @@ Releases are created automatically from commits pushed to `main` using semantic-
 All API routes use HTTP Basic Authentication.
 
 - `GET /health` returns an unauthenticated liveness response.
-- `GET /api/devices` discovers and returns device diagnostics and active app information. The response `id` is a network client ID derived from the current IP; `deviceId` is the stable Roku identity from `info.deviceId`. Add `?refresh=true` to bypass the 30-second discovery cache.
+- `GET /api/devices` returns device diagnostics and active app information. Add `?refresh=true` to trigger an SSDP scan first.
+- `POST /api/devices` accepts `{ "ip": "192.168.1.17" }` to add a Roku directly without SSDP.
+- `GET /api/devices` returns device diagnostics and active app information. Add `?refresh=true` to trigger an SSDP scan first.
 - `GET /api/devices/:id/settings` returns saved policy settings.
 - `GET /api/devices/:id/events` returns the latest 10 event-log records for a device plus cached, server-computed metrics and a compact usage series covering the full retained history, including rotated files.
 - `PUT /api/devices/:id/settings` accepts `{ "maxMinutes": 120, "limitBehavior": "rest_of_day", "cooldownMinutes": 15, "blockedWindows": [{ "start": "22:00", "end": "07:00" }] }`.
 - `DELETE /api/devices/:id/settings` resets the device policy and clears persisted daily usage and lockout state.
 - `POST /api/enforce` immediately checks all discovered devices and powers off active devices that are in a blocked window or have reached their daily limit.
 
-The scheduler runs enforcement every `CHECK_INTERVAL_MS` milliseconds, defaulting to 15 seconds. On-time is accumulated across active periods and persisted by local calendar day. Reaching a limit locks the device either until the next local midnight (`rest_of_day`) or for `cooldownMinutes` (`cooldown`). The lockout remains persisted and is checked on every enforcement pass; failed power-off requests are retried. Usage resets at local midnight.
+Known Roku devices and their current IP addresses are persisted. Enforcement queries those IPs directly. A failed direct query triggers an SSDP recovery scan, while the background scan runs every `DISCOVERY_INTERVAL_MS` milliseconds (default 6 hours). Users can also add a device by IP with `POST /api/devices`. The scheduler runs enforcement every `CHECK_INTERVAL_MS` milliseconds, defaulting to 15 seconds. On-time is accumulated across active periods and persisted by local calendar day. Reaching a limit locks the device either until the next local midnight (`rest_of_day`) or for `cooldownMinutes` (`cooldown`). The lockout remains persisted and is checked on every enforcement pass; failed power-off requests are retried. Usage resets at local midnight.
 
 Each enforcement check also appends one JSON Lines event per device to its own file under `EVENT_LOG_DIR`, which defaults to `data/events` and is separate from `DATA_FILE`. Settings, sessions, and event records are associated with the stable Roku `deviceId`, while the network `clientId` is used only to locate and control the current IP address. To migrate existing IP-keyed state and events, set `MIGRATE_DATA=DEVICE_IDS` for startup. Device filenames use a URL-safe encoding of the storage device ID. Events include the timestamp, device ID, active state, current app name, enforcement status, enforcement event, usage, and lock expiry. Each device log rotates when it reaches `EVENT_LOG_MAX_BYTES` (10 MiB by default) and retains `EVENT_LOG_MAX_FILES` rotated files (3 by default), plus the active file. Storage is therefore bounded per device to approximately 40 MiB by default, plus a possible final event larger than the configured limit.

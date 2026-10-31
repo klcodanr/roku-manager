@@ -10,6 +10,12 @@ export interface RokuDevice {
   error?: string;
 }
 
+export interface KnownDevice {
+  id: string;
+  ip: string;
+  manuallyAdded?: boolean;
+}
+
 export interface BlockWindow {
   start: string;
   end: string;

@@ -2,87 +2,50 @@ import { RokuClient, Keys } from "roku-client";
 import rootLogger from "./logger.js";
 
 const logger = rootLogger.child({ module: "roku" });
-
-/**
- * Promise to ensure that multiple discovery requests are not made simultaneously
- * @type {Promise<RokuClient[]>}
- */
-let discoveryPromise;
 const DISCOVERY_TIMEOUT = 10_000;
 const DISCOVERY_RETRIES = 2;
-const MAX_MISSED_DISCOVERIES = 2;
 
 export class RokuService {
-  /**
-   * Mapping of the IDs to URLs
-   * @type {Record<string, RokuClient>}
-   */
-  #clients;
-  #missedDiscoveries;
-  constructor() {
-    this.#clients = {};
-    this.#missedDiscoveries = {};
-    this.lastDiscovery = 0;
+  /** @type {Record<string, RokuClient>} */
+  #clients = {};
+  /** @type {import('./store.js').Store} */
+  #store;
+  /** @type {Promise<unknown> | undefined} */
+  #scanPromise;
+
+  /** @param {{ store: import('./store.js').Store }} options */
+  constructor({ store }) {
+    this.#store = store;
+    for (const device of store.getDevices()) this.#clients[device.id] = new RokuClient(device.ip);
   }
 
-  /**
-   * Converts the ID into a URL safe ID
-   * @param {URL} ip
-   */
-  #toId(ip) {
-    return Buffer.from(ip.toString()).toString("base64");
+  startDiscovery(intervalMs) {
+    const scan = () =>
+      this.scan().catch((error) => logger.warn({ err: error }, "Device scan failed"));
+    scan();
+    const interval = setInterval(scan, intervalMs);
+    interval.unref();
+    return () => clearInterval(interval);
   }
 
-  /**
-   *
-   * @param {boolean} force
-   * @returns {Promise<RokuClient[]>}
-   */
-  async discover(force = false) {
-    if (!force && Date.now() - this.lastDiscovery < 30_000 && Object.keys(this.#clients).length) {
-      return Object.values(this.#clients);
-    }
-    if (discoveryPromise) {
-      return discoveryPromise;
-    }
-    discoveryPromise = this.#discoverWithRetry();
+  async scan() {
+    if (this.#scanPromise) return this.#scanPromise;
+    this.#scanPromise = this.#scanWithRetry();
     try {
-      const clients = await discoveryPromise;
-      const discovered = Object.fromEntries(
-        clients.map((client) => [this.#toId(client.ip), client]),
-      );
-
-      for (const clientId of Object.keys(this.#clients)) {
-        if (discovered[clientId]) {
-          delete this.#missedDiscoveries[clientId];
-        } else {
-          this.#missedDiscoveries[clientId] = (this.#missedDiscoveries[clientId] ?? 0) + 1;
-          if (this.#missedDiscoveries[clientId] > MAX_MISSED_DISCOVERIES) {
-            delete this.#clients[clientId];
-            delete this.#missedDiscoveries[clientId];
-          }
-        }
-      }
-
-      this.#clients = { ...this.#clients, ...discovered };
-      logger.info({ clients: Object.keys(this.#clients) }, "Discovered Roku devices");
-      this.lastDiscovery = Date.now();
-      return Object.values(this.#clients);
-    } catch (error) {
-      if (!Object.keys(this.#clients).length) throw error;
-      logger.warn({ err: error }, "Unable to refresh Roku discovery; using last known devices");
-      this.lastDiscovery = Date.now();
-      return Object.values(this.#clients);
+      await this.#scanPromise;
     } finally {
-      discoveryPromise = null;
+      this.#scanPromise = undefined;
     }
   }
 
-  async #discoverWithRetry() {
+  async #scanWithRetry() {
     let error;
     for (let attempt = 0; attempt < DISCOVERY_RETRIES; attempt += 1) {
       try {
-        return await RokuClient.discoverAll(DISCOVERY_TIMEOUT);
+        const clients = await RokuClient.discoverAll(DISCOVERY_TIMEOUT);
+        await Promise.all(clients.map((client) => this.#register(client)));
+        logger.info({ count: clients.length }, "Scanned for Roku devices");
+        return;
       } catch (currentError) {
         error = currentError;
         if (attempt + 1 < DISCOVERY_RETRIES) {
@@ -96,56 +59,82 @@ export class RokuService {
     throw error;
   }
 
-  /**
-   *
-   * @param {boolean} force
-   * @returns {Promise<import('./api').RokuDevice[]>}
-   */
-  async list(force = false) {
-    const clients = await this.discover(force);
+  async #register(client, manuallyAdded = false) {
+    const info = await client.info();
+    const id = deviceId(info, client.ip);
+    this.#clients[id] = client;
+    await this.#store.setDevice({
+      id,
+      ip: client.ip.toString(),
+      ...(manuallyAdded ? { manuallyAdded: true } : {}),
+    });
+    return { id, client, info };
+  }
+
+  async add(ip) {
+    const client = new RokuClient(ip);
+    const { id, info } = await this.#register(client, true);
+    return this.#details(id, client, info);
+  }
+
+  async list() {
+    let devices = await this.#listKnown();
+    if (devices.some((device) => device.error)) {
+      try {
+        await this.scan();
+        devices = await this.#listKnown();
+      } catch (error) {
+        logger.warn({ err: error }, "Unable to recover devices with SSDP scan");
+      }
+    }
+    return devices;
+  }
+
+  async #listKnown() {
     return Promise.all(
-      clients.map(async (client) => {
-        const clientId = this.#toId(client.ip);
+      this.#store.getDevices().map(async (known) => {
+        const client = (this.#clients[known.id] ??= new RokuClient(known.ip));
         try {
-          const [info, active] = await Promise.all([client.info(), client.active()]);
-          return {
-            clientId,
-            deviceId: info.deviceId,
-            ip: client.ip.toString(),
-            info,
-            canPowerOff: canPowerOff(info),
-            active,
-          };
+          return await this.#details(known.id, client);
         } catch (error) {
-          logger.warn({ err: error, clientId }, "Unable to query Roku device");
-          return { clientId, ip: client.ip.toString(), error: error.message };
+          logger.warn({ err: error, id: known.id, ip: known.ip }, "Unable to query Roku device");
+          return {
+            id: known.id,
+            clientId: known.id,
+            ip: known.ip,
+            error: error instanceof Error ? error.message : String(error),
+          };
         }
       }),
     );
   }
 
-  /**
-   * Return the stable identities of currently discovered devices for startup migration.
-   * @returns {Promise<Array<{ clientId: string, deviceId: string }>>}
-   */
+  async #details(id, client, knownInfo) {
+    const [info, active] = await Promise.all([knownInfo ?? client.info(), client.active()]);
+    return {
+      id,
+      clientId: id,
+      deviceId: info.deviceId || id,
+      ip: client.ip.toString(),
+      info,
+      canPowerOff: canPowerOff(info),
+      active,
+    };
+  }
+
   async deviceIdentities() {
-    const clients = await this.discover();
+    const clients = Object.values(this.#clients);
     return Promise.all(
       clients.map(async (client) => ({
-        clientId: this.#toId(client.ip),
+        clientId: deviceId(await client.info(), client.ip),
         deviceId: (await client.info()).deviceId,
       })),
     );
   }
 
-  /**
-   * @param {string} id
-   * @param {(import('roku-client').RokuDeviceInfo & { supportsTvPowerControl?: boolean }) | undefined} info
-   * @returns {Promise<"powered_off" | "returned_home">}
-   */
   async powerOff(clientId, info) {
     const client = this.#clients[clientId];
-    if (!client) throw new Error("Device is not currently discovered");
+    if (!client) throw new Error("Device is not known");
     const deviceInfo = info ?? (await client.info());
     if (!canPowerOff(deviceInfo)) {
       await client.keypress(Keys.HOME.command);
@@ -156,7 +145,11 @@ export class RokuService {
   }
 }
 
-/** @param {(import('roku-client').RokuDeviceInfo & { supportsTvPowerControl?: boolean }) | undefined} info */
+function deviceId(info, ip) {
+  const stableId = info.serialNumber || info.deviceId;
+  return stableId ? String(stableId) : Buffer.from(ip.toString()).toString("base64");
+}
+
 function canPowerOff(info) {
   return Boolean(info?.isTv || info?.supportsTvPowerControl);
 }

@@ -103,6 +103,26 @@ main {
   margin-bottom: 20px;
 }
 
+.add-device-form {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.add-device-form label {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+  font-weight: 650;
+}
+
+.add-device-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5dc;
+  border-radius: 8px;
+  font: inherit;
+}
+
 .history-chart {
   display: block;
   width: 100%;
