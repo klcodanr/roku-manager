@@ -597,8 +597,10 @@ document.addEventListener("click", (event) => {
   if (action === "add-window" && form) form.querySelector("[data-windows]")?.append(windowRow());
   if (action === "remove-window") target.closest(".window")?.remove();
   if (action === "reset-settings" && form instanceof HTMLFormElement) resetSettings(form);
-  if (action === "run-enforcement") runEnforcement(actionElement);
-  if (action === "reset-session") resetSession(actionElement);
+  if (action === "run-enforcement")
+    runEnforcement(actionElement instanceof HTMLElement ? actionElement : null);
+  if (action === "reset-session")
+    resetSession(actionElement instanceof HTMLElement ? actionElement : null);
 });
 
 /** @param {HTMLElement | null} actionElement */
