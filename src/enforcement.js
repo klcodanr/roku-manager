@@ -6,7 +6,7 @@ import rootLogger from "./logger.js";
 /** @typedef {{ getSettings: (id: string) => DeviceSettings, getSession: (id: string) => EnforcementSession | undefined, setSession: (id: string, session: EnforcementSession) => Promise<void> }} EnforcementStore */
 /** @typedef {{ append: (event: Record<string, unknown>) => Promise<void> }} EventLog */
 /** @typedef {{ roku: RokuService, store: EnforcementStore, eventLog?: EventLog, clock?: () => Date }} EnforcerOptions */
-/** @typedef {{ id: string, action: string, usedMinutes: number, lockedUntil: string | null }} EnforcementResult */
+/** @typedef {{ deviceId: string, action: string, usedMinutes: number, lockedUntil: string | null }} EnforcementResult */
 
 const logger = rootLogger.child({ component: "enforcement" });
 
@@ -65,7 +65,8 @@ function toMinutes(value) {
 
 /** @param {{ device: RokuDevice, roku: RokuService, store: EnforcementStore, eventLog?: EventLog, now: Date }} options @returns {Promise<EnforcementResult>} */
 async function enforceDevice({ device, roku, store, eventLog, now }) {
-  const settings = store.getSettings(device.id);
+  const deviceId = device.deviceId;
+  const settings = store.getSettings(deviceId);
   const active = Boolean(
     device.active &&
     device.active.id !== "native-ui" &&
@@ -73,7 +74,7 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
     device.active.name !== "Roku Dynamic Menu",
   );
   const today = localDateKey(now);
-  const previous = store.getSession(device.id);
+  const previous = store.getSession(deviceId);
   const session =
     previous?.date === today && "usedSeconds" in previous ? previous : newSession(today);
   if (typeof session.enforcementFailed !== "boolean") {
@@ -111,11 +112,8 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
 
   if (active && (blocked || locked || limitReached)) {
     try {
-      logger.debug(
-        { deviceId: device.id, blocked, locked, limitReached },
-        "Enforcing device limits",
-      );
-      const powerAction = await roku.powerOff(device.id, device.info);
+      logger.debug({ deviceId, blocked, locked, limitReached }, "Enforcing device limits");
+      const powerAction = await roku.powerOff(device.clientId, device.info);
       action =
         powerAction === "returned_home"
           ? "returned_home"
@@ -128,7 +126,7 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
       action = "power_off_failed";
       session.enforcementFailed = true;
       session.enforcementError = error instanceof Error ? error.message : String(error);
-      logger.error({ err: error, deviceId: device.id }, "Unable to enforce Roku policy");
+      logger.error({ err: error, deviceId }, "Unable to enforce Roku policy");
     }
   }
 
@@ -139,9 +137,9 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
         : nextLocalMidnight(now).toISOString();
   }
 
-  await store.setSession(device.id, session);
+  await store.setSession(deviceId, session);
   const result = {
-    id: device.id,
+    deviceId,
     action,
     usedMinutes: Math.floor(session.usedSeconds / 60),
     lockedUntil: session.lockedUntil,
@@ -149,7 +147,7 @@ async function enforceDevice({ device, roku, store, eventLog, now }) {
   if (eventLog) {
     await eventLog.append({
       timestamp: now.toISOString(),
-      deviceId: device.id,
+      deviceId,
       active,
       appName: device.active?.name ?? null,
       enforcementStatus: session.enforcementFailed

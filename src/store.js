@@ -47,12 +47,12 @@ export class Store {
    */
   getSettings(id) {
     return {
-      id,
       maxMinutes: null,
       blockedWindows: [],
       limitBehavior: "rest_of_day",
       cooldownMinutes: 15,
       ...this.#state.settings[id],
+      deviceId: id,
     };
   }
 
@@ -62,9 +62,31 @@ export class Store {
    * @returns  {Promise<import('./api').DeviceSettings>}
    */
   async setSettings(id, settings) {
-    this.#state.settings[id] = { ...this.getSettings(id), ...settings, id };
+    this.#state.settings[id] = { ...this.getSettings(id), ...settings, deviceId: id };
     await this.save();
     return this.#state.settings[id];
+  }
+
+  /**
+   * Move data written by the old IP-based identity to the stable Roku identity.
+   * @param {string} oldId
+   * @param {string} deviceId
+   */
+  async migrateDevice(oldId, deviceId) {
+    if (oldId === deviceId) return;
+    let changed = false;
+    for (const collection of [this.#state.settings, this.#state.sessions]) {
+      if (collection[oldId] !== undefined) {
+        if (collection[deviceId] === undefined) collection[deviceId] = { ...collection[oldId] };
+        delete collection[oldId];
+        changed = true;
+      }
+    }
+    if (this.#state.settings[deviceId]) {
+      this.#state.settings[deviceId].deviceId = deviceId;
+      delete this.#state.settings[deviceId].id;
+    }
+    if (changed) await this.save();
   }
 
   /**

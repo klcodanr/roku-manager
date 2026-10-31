@@ -32,6 +32,37 @@ export class EventLog {
     this.cache.delete(event.deviceId);
   }
 
+  /** @param {string} oldId @param {string} deviceId */
+  async migrateDevice(oldId, deviceId) {
+    if (oldId === deviceId) return;
+    let files;
+    try {
+      files = await fs.readdir(this.directory);
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      throw error;
+    }
+    const oldFiles = files.filter((file) => belongsToDevice(file, oldId));
+    for (const file of oldFiles) {
+      const filePath = `${this.directory}/${file}`;
+      const lines = (await fs.readFile(filePath, "utf8")).split("\n");
+      const migrated = lines.map((line) => {
+        if (!line) return line;
+        try {
+          const event = JSON.parse(line);
+          event.deviceId = deviceId;
+          return JSON.stringify(event);
+        } catch {
+          return line;
+        }
+      });
+      const targetPath = `${this.directory}/${renameDeviceFile(file, oldId, deviceId)}`;
+      await moveFile(filePath, targetPath, migrated.join("\n"));
+    }
+    this.cache.delete(oldId);
+    this.cache.delete(deviceId);
+  }
+
   /** @returns {Promise<void>} */
   async close() {
     await Promise.all(
@@ -75,7 +106,7 @@ export class EventLog {
     }
 
     const events = [];
-    for (const file of files.filter((name) => name.endsWith(".jsonl"))) {
+    for (const file of files.filter((name) => belongsToDevice(name, deviceId))) {
       const content = await fs.readFile(`${this.directory}/${file}`, "utf8");
       for (const line of content.split("\n")) {
         if (!line) continue;
@@ -105,6 +136,37 @@ export class EventLog {
       );
     }
     return this.streams.get(deviceId);
+  }
+}
+
+/** @param {string} file @param {string} deviceId */
+function belongsToDevice(file, deviceId) {
+  const safeId = safeDeviceId(deviceId);
+  return file === `${safeId}.jsonl` || (file.endsWith(`-${safeId}.jsonl`) && /^\d{8}-/.test(file));
+}
+
+/** @param {string} file @param {string} oldId @param {string} deviceId */
+function renameDeviceFile(file, oldId, deviceId) {
+  const oldSafeId = safeDeviceId(oldId);
+  const newSafeId = safeDeviceId(deviceId);
+  return file === `${oldSafeId}.jsonl`
+    ? `${newSafeId}.jsonl`
+    : `${file.slice(0, -oldSafeId.length - 6)}-${newSafeId}.jsonl`;
+}
+
+/** @param {string} source @param {string} target @param {string} content */
+async function moveFile(source, target, content) {
+  try {
+    await fs.access(target);
+    await fs.appendFile(target, content);
+    await fs.unlink(source);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await fs.writeFile(source, content);
+      await fs.rename(source, target);
+      return;
+    }
+    throw error;
   }
 }
 
