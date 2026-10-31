@@ -51,8 +51,19 @@ export const startServer = ({ roku, store, enforce, eventLog }) => {
     }),
   );
   app.get("/api/devices", async (c) => {
-    const devices = await roku.list(c.req.query("refresh") === "true");
+    if (c.req.query("refresh") === "true") await roku.scan();
+    const devices = await roku.list();
     return c.json({ devices });
+  });
+  app.post("/api/devices", async (c) => {
+    const body = await c.req.json();
+    if (typeof body.ip !== "string" || !body.ip.trim())
+      return c.json({ error: "ip is required" }, 400);
+    try {
+      return c.json(await roku.add(body.ip.trim()), 201);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    }
   });
   app.get("/api/devices/:id/settings", (c) => c.json(store.getSettings(c.req.param("id"))));
   app.get("/api/devices/:id/session", async (c) => {

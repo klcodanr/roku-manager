@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const emptyState = () => ({ settings: {}, sessions: {} });
+const emptyState = () => ({ settings: {}, sessions: {}, devices: {} });
 
 export class Store {
   /**
@@ -19,7 +19,7 @@ export class Store {
 
   async load() {
     try {
-      this.#state = JSON.parse(await fs.readFile(this.filePath, "utf8"));
+      this.#state = { ...emptyState(), ...JSON.parse(await fs.readFile(this.filePath, "utf8")) };
     } catch (error) {
       if (
         typeof error === "object" &&
@@ -102,6 +102,21 @@ export class Store {
   async setSession(id, session) {
     this.#state.sessions[id] = session;
     await this.save();
+  }
+
+  /** @returns {import('./api').KnownDevice[]} */
+  getDevices() {
+    return Object.values(this.#state.devices);
+  }
+
+  /**
+   * @param {import('./api').KnownDevice} device
+   * @returns {Promise<import('./api').KnownDevice>}
+   */
+  async setDevice(device) {
+    this.#state.devices[device.id] = device;
+    await this.save();
+    return device;
   }
 }
 
