@@ -11,10 +11,13 @@
 
 const appElement = document.querySelector("#app");
 const refreshElement = document.querySelector("#refresh");
+const serverTimeElement = document.querySelector("#server-time");
 if (!(appElement instanceof HTMLElement) || !(refreshElement instanceof HTMLButtonElement))
   throw new Error("Required application elements are missing");
+if (!(serverTimeElement instanceof HTMLElement)) throw new Error("Server time element is missing");
 const app = appElement;
 const refreshButton = refreshElement;
+const serverTime = serverTimeElement;
 /** @type {AppState} */
 const state = {
   devices: [],
@@ -83,6 +86,21 @@ async function loadDevices(refresh = false) {
     state.loading = false;
     refreshButton.disabled = false;
     render();
+  }
+}
+
+async function loadServerTime() {
+  try {
+    const response = await request("/api/server-time");
+    const date = new Date(response.now);
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+      timeZone: response.timeZone,
+    }).format(date);
+    serverTime.textContent = `Server time: ${formatted} (${response.timeZone})`;
+  } catch {
+    serverTime.textContent = "Server time unavailable";
   }
 }
 
@@ -713,6 +731,8 @@ document.addEventListener("submit", async (event) => {
 refreshButton.addEventListener("click", () => loadDevices(true));
 window.addEventListener("popstate", render);
 
+await loadServerTime();
+setInterval(loadServerTime, 15_000);
 await loadDevices();
 
 export {};
