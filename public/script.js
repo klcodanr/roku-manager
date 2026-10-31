@@ -1,7 +1,7 @@
 /** @typedef {{ start: string, end: string }} BlockedWindow */
 /** @typedef {import('../src/api').RokuDevice} Device */
 /** @typedef {import('../src/api').SessionSummary} SessionSummary */
-/** @typedef {{ id: string, maxMinutes: number | null, blockedWindows: BlockedWindow[], limitBehavior: 'rest_of_day' | 'cooldown', cooldownMinutes: number }} DeviceSettings */
+/** @typedef {{ deviceId: string, maxMinutes: number | null, blockedWindows: BlockedWindow[], limitBehavior: 'rest_of_day' | 'cooldown', cooldownMinutes: number }} DeviceSettings */
 /** @typedef {{ name: 'devices' } | { name: 'manage', id: string }} Route */
 /** @typedef {{ devices: Device[] }} DeviceResponse */
 /** @typedef {{ timestamp: string, deviceId: string, active: boolean, appName: string | null, enforcementStatus: string, enforcementEvent: string, usedMinutes: number, lockedUntil: string | null }} DeviceEvent */
@@ -192,7 +192,7 @@ function deviceCard(device) {
   ]);
   const manage = el("a", {
     class: "button",
-    href: `/manage/${encodeURIComponent(device.id)}`,
+    href: `/manage/${encodeURIComponent(device.deviceId)}`,
     dataset: { link: "" },
     text: "Manage limits",
   });
@@ -223,7 +223,7 @@ function deviceCard(device) {
 
 /** @param {string} id */
 function renderManage(id) {
-  const device = state.devices.find((item) => item.id === id);
+  const device = state.devices.find((item) => item.deviceId === id);
   if (!device) {
     app.append(
       el("section", { class: "card" }, [
@@ -564,7 +564,7 @@ function formatTime(value) {
 
 /** @param {Device} device @returns {string} */
 function deviceName(device) {
-  const name = device.info?.friendlyDeviceName || device.info?.userDeviceName || device.id;
+  const name = device.info?.friendlyDeviceName || device.info?.userDeviceName || device.deviceId;
   const location = device.info?.userDeviceLocation;
   return location ? `${name} (${location})` : name;
 }

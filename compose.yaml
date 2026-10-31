@@ -11,6 +11,7 @@ services:
       AUTH_PASSWORD: ${AUTH_PASSWORD}
       LOG_LEVEL: ${LOG_LEVEL}
       CHECK_INTERVAL_MS: ${CHECK_INTERVAL_MS}
+      MIGRATE_DATA: ${MIGRATE_DATA}
     volumes:
       - roku-manager-data:/app/data
     restart: unless-stopped
