@@ -73,8 +73,15 @@ export class RokuService {
 
   async add(ip) {
     const client = new RokuClient(ip);
-    const { id, info } = await this.#register(client, true);
-    return this.#details(id, client, info);
+    const details = await this.#details(undefined, client);
+    const id = deviceId(details.info, client.ip);
+    this.#clients[id] = client;
+    await this.#store.setDevice({
+      id,
+      ip: client.ip.toString(),
+      manuallyAdded: true,
+    });
+    return { ...details, id, clientId: id };
   }
 
   async list() {
@@ -110,9 +117,20 @@ export class RokuService {
   }
 
   async #details(id, client, knownInfo) {
-    const [info, active] = await Promise.all([knownInfo ?? client.info(), client.active()]);
+    let info;
+    try {
+      info = knownInfo ?? (await client.info());
+    } catch (error) {
+      throw networkError(client, "query/device-info", error);
+    }
+    let active;
+    try {
+      active = await client.active();
+    } catch (error) {
+      throw networkError(client, "query/active-app", error);
+    }
     return {
-      id,
+      ...(id ? { id } : {}),
       clientId: id,
       deviceId: info.deviceId || id,
       ip: client.ip.toString(),
@@ -152,4 +170,10 @@ function deviceId(info, ip) {
 
 function canPowerOff(info) {
   return Boolean(info?.isTv || info?.supportsTvPowerControl);
+}
+
+function networkError(client, endpoint, error) {
+  const cause = error?.cause?.code ? ` (${error.cause.code})` : "";
+  const message = error instanceof Error ? error.message : String(error);
+  return new Error(`Unable to reach Roku at ${new URL(endpoint, client.ip)}: ${message}${cause}`);
 }
