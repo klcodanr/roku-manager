@@ -19,7 +19,7 @@
     "@hono/node-server": "^1.14.1",
     "hono": "^4.7.2",
     "hono-pino": "^0.10.3",
-    "pino": "^9.6.0",
+    "pino": "^10.4.0",
     "roku-client": "^6.0.0",
     "rotating-file-stream": "^3.2.10"
   },
