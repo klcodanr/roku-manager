@@ -21,8 +21,19 @@ export interface BlockWindow {
   end: string;
 }
 
+export interface DeviceRule {
+  name: string;
+  days: number[];
+  start: string;
+  end: string;
+  maxMinutes: number | null;
+  limitBehavior: "rest_of_day" | "cooldown";
+  cooldownMinutes: number;
+}
+
 export interface DeviceSettings {
   deviceId: string;
+  rules: Array<DeviceRule>;
   maxMinutes: number | null;
   blockedWindows: Array<BlockWindow>;
   limitBehavior: "rest_of_day" | "cooldown";

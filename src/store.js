@@ -46,12 +46,27 @@ export class Store {
    * @returns {import('./api').DeviceSettings}
    */
   getSettings(id) {
+    const saved = this.#state.settings[id];
+    const legacyRule =
+      saved && saved.rules === undefined
+        ? {
+            days: [0, 1, 2, 3, 4, 5, 6],
+            name: "Rule 1",
+            start: "00:00",
+            end: "00:00",
+            maxMinutes: saved.maxMinutes ?? null,
+            limitBehavior: saved.limitBehavior ?? "rest_of_day",
+            cooldownMinutes: saved.cooldownMinutes ?? 15,
+          }
+        : null;
+    const rules = saved?.rules ?? (legacyRule ? [legacyRule] : []);
     return {
-      maxMinutes: null,
-      blockedWindows: [],
-      limitBehavior: "rest_of_day",
-      cooldownMinutes: 15,
-      ...this.#state.settings[id],
+      ...saved,
+      rules: rules.map((rule, index) => ({ ...rule, name: rule.name ?? `Rule ${index + 1}` })),
+      blockedWindows: saved?.blockedWindows ?? [],
+      maxMinutes: saved?.maxMinutes ?? null,
+      limitBehavior: saved?.limitBehavior ?? "rest_of_day",
+      cooldownMinutes: saved?.cooldownMinutes ?? 15,
       deviceId: id,
     };
   }
@@ -64,7 +79,7 @@ export class Store {
   async setSettings(id, settings) {
     this.#state.settings[id] = { ...this.getSettings(id), ...settings, deviceId: id };
     await this.save();
-    return this.#state.settings[id];
+    return this.getSettings(id);
   }
 
   /**
@@ -148,6 +163,40 @@ export class Store {
  * @returns {string | null}
  */
 export function validateSettings(body) {
+  if (body.rules !== undefined) {
+    if (!Array.isArray(body.rules)) return "rules must be an array";
+    for (const rule of body.rules) {
+      if (!rule || !Array.isArray(rule.days) || rule.days.length === 0) {
+        return "rules entries must have at least one day";
+      }
+      if (rule.name !== undefined && typeof rule.name !== "string") {
+        return "rule name must be a string";
+      }
+      if (rule.days.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) {
+        return "rule days must be integers from 0 through 6";
+      }
+      if (!/^\d{2}:\d{2}$/.test(rule.start) || !/^\d{2}:\d{2}$/.test(rule.end)) {
+        return "rules entries must have start and end in HH:MM format";
+      }
+      if (
+        [rule.start, rule.end].some((time) => {
+          const [hour, minute] = time.split(":").map(Number);
+          return hour > 23 || minute > 59;
+        })
+      )
+        return "rule times must be valid times";
+      if (rule.maxMinutes !== null && (!Number.isInteger(rule.maxMinutes) || rule.maxMinutes < 0)) {
+        return "rule maxMinutes must be null or a non-negative integer";
+      }
+      if (!["rest_of_day", "cooldown"].includes(rule.limitBehavior)) {
+        return "rule limitBehavior must be rest_of_day or cooldown";
+      }
+      if (!Number.isInteger(rule.cooldownMinutes) || rule.cooldownMinutes < 1) {
+        return "rule cooldownMinutes must be a positive integer";
+      }
+    }
+    return null;
+  }
   if (body.maxMinutes !== null && (!Number.isInteger(body.maxMinutes) || body.maxMinutes < 0)) {
     return "maxMinutes must be null or a non-negative integer";
   }

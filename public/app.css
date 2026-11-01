@@ -445,6 +445,131 @@ pre {
   width: 150px;
 }
 
+.rule-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(42px, 1fr));
+  min-width: 350px;
+  text-align: center;
+}
+
+.rule-day-name {
+  color: #60717b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rule {
+  width: 100%;
+  border-bottom: 1px solid #e5eaed;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.rule-days label {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.rule-days input {
+  width: auto;
+}
+
+.rule-preview {
+  border: 1px solid #e5eaed;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 14px;
+}
+
+.rule-preview .section-heading {
+  margin-bottom: 12px;
+}
+
+.schedule-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(7, minmax(36px, 1fr));
+  min-width: 360px;
+}
+
+.schedule-day {
+  min-width: 0;
+  text-align: center;
+}
+
+.schedule-day strong {
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 6px;
+}
+
+.schedule-hours {
+  display: grid;
+  gap: 1px;
+  grid-template-rows: repeat(24, minmax(4px, 1fr));
+  height: 180px;
+}
+
+.schedule-hour {
+  background: #edf1f3;
+  border-radius: 2px;
+  display: block;
+}
+
+.schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+
+.schedule-legend span {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.82rem;
+  gap: 5px;
+}
+
+.schedule-legend i {
+  border-radius: 3px;
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.rule-time {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.rule-time input {
+  width: 150px;
+}
+
+.rule-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.rule-fields label {
+  width: 100%;
+}
+
+.rule-fields input,
+.rule-fields select {
+  width: 100%;
+}
+
 .form-actions {
   align-items: center;
   border-top: 1px solid #e5eaed;
@@ -487,6 +612,18 @@ pre {
 
   .window input {
     width: calc(50% - 24px);
+  }
+
+  .rule-time {
+    width: 100%;
+  }
+
+  .rule-time input {
+    width: calc(50% - 24px);
+  }
+
+  .rule-preview {
+    overflow-x: auto;
   }
 
   .form-actions {

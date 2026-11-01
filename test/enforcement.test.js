@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createEnforcer } from "../src/enforcement.js";
+import { createEnforcer, matchingRule } from "../src/enforcement.js";
 import { EventLog, safeDeviceId } from "../src/event-log.js";
 import { Store } from "../src/store.js";
 
@@ -83,6 +83,47 @@ test("accumulates usage across inactive periods and persists the lockout", async
     fixtureState.getSession().lockedUntil,
     new Date("2026-10-30T12:03:43").toISOString(),
   );
+});
+
+test("applies the first matching ordered rule", () => {
+  const settings = {
+    rules: [
+      {
+        name: "Weekday afternoons",
+        days: [1, 2, 3, 4, 5],
+        start: "15:00",
+        end: "21:00",
+        maxMinutes: 30,
+        limitBehavior: "rest_of_day",
+        cooldownMinutes: 15,
+      },
+      {
+        name: "Weekday evenings",
+        days: [1, 2, 3, 4, 5],
+        start: "18:00",
+        end: "20:00",
+        maxMinutes: 60,
+        limitBehavior: "cooldown",
+        cooldownMinutes: 10,
+      },
+    ],
+  };
+
+  assert.equal(matchingRule(settings, new Date("2026-10-30T19:00:00")).maxMinutes, 30);
+  assert.equal(matchingRule(settings, new Date("2026-10-30T22:00:00")), null);
+});
+
+test("matches the early portion of an overnight rule against its prior day", () => {
+  const rule = {
+    name: "Weekend overnight",
+    days: [5],
+    start: "22:00",
+    end: "07:00",
+    maxMinutes: 30,
+    limitBehavior: "rest_of_day",
+    cooldownMinutes: 15,
+  };
+  assert.equal(matchingRule({ rules: [rule] }, new Date("2026-10-31T06:00:00")).maxMinutes, 30);
 });
 
 test("retries a lockout on every pass and resets after cooldown", async () => {

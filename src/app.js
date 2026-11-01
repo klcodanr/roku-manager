@@ -28,7 +28,13 @@ const store = new Store(process.env.DATA_FILE || path.join(root, "..", "data", "
 
 await store.load();
 const roku = new RokuService({ store });
-const enforce = createEnforcer({ roku, store, eventLog });
+const enforce = createEnforcer({
+  roku,
+  store,
+  eventLog,
+  recheckDelayMs: Number(process.env.ENFORCEMENT_RECHECK_DELAY_MS || 1_000),
+  recheckAttempts: Number(process.env.ENFORCEMENT_RECHECK_ATTEMPTS || 3),
+});
 const stopDiscovery = roku.startDiscovery(Number(process.env.DISCOVERY_INTERVAL_MS || 21_600_000));
 await migrateDeviceIdentities();
 const stopEnforcement = startEnforcement(enforce, {
