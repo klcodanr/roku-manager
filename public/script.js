@@ -1,7 +1,8 @@
 /** @typedef {{ start: string, end: string }} BlockedWindow */
+/** @typedef {{ name: string, days: number[], start: string, end: string, maxMinutes: number | null, limitBehavior: 'rest_of_day' | 'cooldown', cooldownMinutes: number }} DeviceRule */
 /** @typedef {import('../src/api').RokuDevice} Device */
 /** @typedef {import('../src/api').SessionSummary} SessionSummary */
-/** @typedef {{ deviceId: string, maxMinutes: number | null, blockedWindows: BlockedWindow[], limitBehavior: 'rest_of_day' | 'cooldown', cooldownMinutes: number }} DeviceSettings */
+/** @typedef {{ deviceId: string, rules: DeviceRule[], maxMinutes: number | null, blockedWindows: BlockedWindow[], limitBehavior: 'rest_of_day' | 'cooldown', cooldownMinutes: number }} DeviceSettings */
 /** @typedef {{ name: 'devices' } | { name: 'manage', id: string }} Route */
 /** @typedef {{ devices: Device[] }} DeviceResponse */
 /** @typedef {{ timestamp: string, deviceId: string, active: boolean, appName: string | null, enforcementStatus: string, enforcementEvent: string, usedMinutes: number, lockedUntil: string | null }} DeviceEvent */
@@ -262,58 +263,24 @@ function renderManage(id) {
   const settings = state.settings[id];
   const session = state.sessions[id];
   const name = deviceName(device);
-  const windows = el("div", { dataset: { windows: "" } }, settings.blockedWindows.map(windowRow));
+  const rules = el("div", { dataset: { rules: "" } }, settings.rules.map(ruleRow));
+  const preview = rulePreview(settings.rules);
   const form = el("form", { class: "card form", dataset: { deviceForm: id } }, [
-    field(
-      "Daily on-time limit (minutes)",
-      el("input", {
-        name: "maxMinutes",
-        type: "number",
-        min: "0",
-        value: settings.maxMinutes ?? "",
-        placeholder: "Unlimited",
-      }),
-      "Blank for unlimited",
-    ),
-    field(
-      "When the limit is reached",
-      el("select", { name: "limitBehavior" }, [
-        el("option", {
-          value: "rest_of_day",
-          text: "Block for the rest of the day",
-          selected: settings.limitBehavior === "rest_of_day",
-        }),
-        el("option", {
-          value: "cooldown",
-          text: "Use a cooldown period",
-          selected: settings.limitBehavior === "cooldown",
-        }),
-      ]),
-    ),
-    field(
-      "Cooldown period (minutes)",
-      el("input", {
-        name: "cooldownMinutes",
-        type: "number",
-        min: "1",
-        value: settings.cooldownMinutes ?? 15,
-      }),
-      "Used when cooldown is selected",
-    ),
     el("div", { class: "form-section" }, [
+      preview,
       el("div", { class: "section-heading" }, [
         el("div", {}, [
-          el("h2", { text: "Blocked windows" }),
-          el("p", { class: "muted", text: "Devices are powered off while a window is active." }),
+          el("h2", { text: "Rules" }),
+          el("p", { class: "muted", text: "The first rule matching the day and time is applied." }),
         ]),
         el("button", {
           class: "secondary",
           type: "button",
-          text: "Add window",
-          dataset: { action: "add-window" },
+          text: "Add rule",
+          dataset: { action: "add-rule" },
         }),
       ]),
-      windows,
+      rules,
     ]),
     el("div", { class: "form-actions" }, [
       el("button", { type: "submit", text: "Save limits" }),
@@ -579,33 +546,219 @@ function deviceName(device) {
   return location ? `${name} (${location})` : name;
 }
 
-/** @param {string} label @param {HTMLElement} input @param {string} [hint] @returns {HTMLLabelElement} */
-function field(label, input, hint = "") {
-  return el("label", {}, [
-    text(label),
-    hint ? el("span", { class: "muted", text: ` (${hint})` }) : null,
-    input,
-  ]);
-}
-
 /** @param {string} href @param {string} label @param {string} [className] @returns {HTMLAnchorElement} */
 function link(href, label, className = "button") {
   return el("a", { class: className, href, dataset: { link: "" }, text: label });
 }
 
-/** @param {BlockedWindow} [values] @returns {HTMLDivElement} */
-function windowRow(values = { start: "22:00", end: "07:00" }) {
-  return el("div", { class: "window" }, [
-    el("input", { name: "start", type: "time", value: values.start, required: true }),
-    el("span", { text: "to" }),
-    el("input", { name: "end", type: "time", value: values.end, required: true }),
-    el("button", {
-      class: "text-button",
-      type: "button",
-      text: "Remove",
-      dataset: { action: "remove-window" },
-    }),
+/** @param {DeviceRule} [values] @returns {HTMLDivElement} */
+function ruleRow(
+  values = {
+    name: "",
+    days: [1, 2, 3, 4, 5],
+    start: "15:00",
+    end: "21:00",
+    maxMinutes: null,
+    limitBehavior: "rest_of_day",
+    cooldownMinutes: 15,
+  },
+) {
+  return el("div", { class: "rule" }, [
+    el("label", {}, [
+      text("Rule name"),
+      el("input", {
+        name: "name",
+        type: "text",
+        value: values.name ?? "",
+        placeholder: "Rule name",
+        maxlength: "100",
+      }),
+    ]),
+    el(
+      "div",
+      { class: "rule-days" },
+      [0, 1, 2, 3, 4, 5, 6].map((day) =>
+        el("label", {}, [
+          el("span", {
+            class: "rule-day-name",
+            text: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day],
+          }),
+          el("input", {
+            name: "days",
+            type: "checkbox",
+            value: day,
+            checked: values.days.includes(day),
+            ariaLabel: [
+              "Sunday",
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+            ][day],
+          }),
+        ]),
+      ),
+    ),
+    el("div", { class: "rule-time" }, [
+      el("input", { name: "start", type: "time", value: values.start, required: true }),
+      text(" to "),
+      el("input", { name: "end", type: "time", value: values.end, required: true }),
+    ]),
+    el("div", { class: "rule-fields" }, [
+      el("label", {}, [
+        text("Daily minutes"),
+        el("input", {
+          name: "maxMinutes",
+          type: "number",
+          min: "0",
+          value: values.maxMinutes ?? "",
+          placeholder: "Unlimited",
+        }),
+      ]),
+      el("label", {}, [
+        text("Limit behavior"),
+        el("select", { name: "limitBehavior" }, [
+          el("option", {
+            value: "rest_of_day",
+            text: "Rest of day",
+            selected: values.limitBehavior === "rest_of_day",
+          }),
+          el("option", {
+            value: "cooldown",
+            text: "Cooldown",
+            selected: values.limitBehavior === "cooldown",
+          }),
+        ]),
+      ]),
+      el("label", {}, [
+        text("Cooldown minutes"),
+        el("input", {
+          name: "cooldownMinutes",
+          type: "number",
+          min: "1",
+          value: values.cooldownMinutes,
+        }),
+      ]),
+      el("button", {
+        class: "text-button",
+        type: "button",
+        text: "Remove",
+        dataset: { action: "remove-rule" },
+      }),
+    ]),
   ]);
+}
+
+/** @param {DeviceRule[]} rules @returns {HTMLElement} */
+function rulePreview(rules) {
+  const colors = ["#1769aa", "#3a8b5a", "#c47b2c", "#7957a8", "#b24b44", "#5b7182"];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const columns = dayNames.map((day, dayIndex) =>
+    el("div", { class: "schedule-day" }, [
+      el("strong", { text: day }),
+      el(
+        "div",
+        { class: "schedule-hours" },
+        Array.from({ length: 24 }, (_, hour) => {
+          const ruleIndex = firstRuleAt(rules, dayIndex, hour * 60 + 30);
+          return el("span", {
+            class: "schedule-hour",
+            title: `${day} ${formatHour(hour)}${ruleIndex === null ? ": no rule" : `: ${rules[ruleIndex].name || `Rule ${ruleIndex + 1}`}`}`,
+            style: ruleIndex === null ? "" : `background:${colors[ruleIndex % colors.length]}`,
+          });
+        }),
+      ),
+    ]),
+  );
+  return el("div", { class: "rule-preview", dataset: { rulePreview: "" } }, [
+    el("div", { class: "section-heading" }, [
+      el("div", {}, [
+        el("h2", { text: "Weekly schedule" }),
+        el("p", { class: "muted", text: "Colors show which rule is active first." }),
+      ]),
+    ]),
+    el("div", { class: "schedule-grid" }, columns),
+    el(
+      "div",
+      { class: "schedule-legend" },
+      rules.map((rule, index) =>
+        el("span", {}, [
+          el("i", { style: `background:${colors[index % colors.length]}` }),
+          text(rule.name || `Rule ${index + 1}`),
+        ]),
+      ),
+    ),
+  ]);
+}
+
+/** @param {DeviceRule[]} rules @param {number} day @param {number} minute @returns {number | null} */
+function firstRuleAt(rules, day, minute) {
+  const previousDay = (day + 6) % 7;
+  const index = rules.findIndex((rule) => {
+    const start = timeMinutes(rule.start);
+    const end = timeMinutes(rule.end);
+    return start < end
+      ? rule.days.includes(day) && minute >= start && minute < end
+      : (rule.days.includes(day) && minute >= start) ||
+          (rule.days.includes(previousDay) && minute < end);
+  });
+  return index < 0 ? null : index;
+}
+
+/** @param {number} hour @returns {string} */
+function formatHour(hour) {
+  return `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`;
+}
+
+/** @param {string} value @returns {number} */
+function timeMinutes(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/** @param {HTMLFormElement} form @returns {DeviceRule[]} */
+function readRules(form) {
+  return [...form.querySelectorAll(".rule")].map((row) => {
+    const days = [...row.querySelectorAll('input[name="days"]:checked')].map((input) =>
+      Number(/** @type {HTMLInputElement} */ (input).value),
+    );
+    const name = row.querySelector('input[name="name"]');
+    const start = row.querySelector('input[name="start"]');
+    const end = row.querySelector('input[name="end"]');
+    const max = row.querySelector('input[name="maxMinutes"]');
+    const behavior = row.querySelector('select[name="limitBehavior"]');
+    const cooldown = row.querySelector('input[name="cooldownMinutes"]');
+    if (!name || !start || !end || !max || !behavior || !cooldown)
+      throw new Error("Rule fields are missing");
+    if (
+      !(name instanceof HTMLInputElement) ||
+      !(start instanceof HTMLInputElement) ||
+      !(end instanceof HTMLInputElement) ||
+      !(max instanceof HTMLInputElement) ||
+      !(behavior instanceof HTMLSelectElement) ||
+      !(cooldown instanceof HTMLInputElement)
+    )
+      throw new Error("Rule fields have invalid types");
+    return {
+      name: name.value.trim(),
+      days,
+      start: start.value,
+      end: end.value,
+      maxMinutes: max.value === "" ? null : Number(max.value),
+      limitBehavior: behavior.value === "cooldown" ? "cooldown" : "rest_of_day",
+      cooldownMinutes: cooldown.value === "" ? 15 : Number(cooldown.value),
+    };
+  });
+}
+
+/** @param {HTMLFormElement} form */
+function updateRulePreview(form) {
+  const preview = form.querySelector("[data-rule-preview]");
+  if (!(preview instanceof HTMLElement)) return;
+  const next = rulePreview(readRules(form));
+  preview.replaceWith(next);
 }
 
 document.addEventListener("click", (event) => {
@@ -622,8 +775,14 @@ document.addEventListener("click", (event) => {
   const action = actionElement instanceof HTMLElement ? actionElement.dataset.action : undefined;
   if (action === "retry") loadDevices(true);
   const form = target.closest("form");
-  if (action === "add-window" && form) form.querySelector("[data-windows]")?.append(windowRow());
-  if (action === "remove-window") target.closest(".window")?.remove();
+  if (action === "add-rule" && form) {
+    form.querySelector("[data-rules]")?.append(ruleRow());
+    updateRulePreview(form);
+  }
+  if (action === "remove-rule" && form) {
+    target.closest(".rule")?.remove();
+    updateRulePreview(form);
+  }
   if (action === "reset-settings" && form instanceof HTMLFormElement) resetSettings(form);
   if (action === "run-enforcement")
     runEnforcement(actionElement instanceof HTMLElement ? actionElement : null);
@@ -717,37 +876,17 @@ document.addEventListener("submit", async (event) => {
   if (!form.matches("[data-device-form]")) return;
   event.preventDefault();
   const message = form.querySelector("[data-message]");
-  const maxInput = form.querySelector('[name="maxMinutes"]');
-  const behaviorInput = form.querySelector('[name="limitBehavior"]');
-  const cooldownInput = form.querySelector('[name="cooldownMinutes"]');
-  if (
-    !(message instanceof HTMLElement) ||
-    !(maxInput instanceof HTMLInputElement) ||
-    !(behaviorInput instanceof HTMLSelectElement) ||
-    !(cooldownInput instanceof HTMLInputElement)
-  )
-    throw new Error("Form fields are missing");
-  const windows = [...form.querySelectorAll(".window")].map((row) => {
-    const start = row.querySelector('[name="start"]');
-    const end = row.querySelector('[name="end"]');
-    if (!(start instanceof HTMLInputElement) || !(end instanceof HTMLInputElement))
-      throw new Error("Blocked window fields are missing");
-    return { start: start.value, end: end.value };
-  });
-  const max = maxInput.value;
+  if (!(message instanceof HTMLElement)) throw new Error("Form fields are missing");
+  const rules = readRules(form);
   message.textContent = "Saving...";
   try {
     const id = form.dataset.deviceForm;
     if (!id) throw new Error("Device id is missing");
-    const cooldown = cooldownInput.value;
     const settings = await request(`/api/devices/${encodeURIComponent(id)}/settings`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        maxMinutes: max === "" ? null : Number(max),
-        blockedWindows: windows,
-        limitBehavior: behaviorInput.value,
-        cooldownMinutes: cooldown === "" ? 15 : Number(cooldown),
+        rules,
       }),
     });
     state.settings[id] = settings;
@@ -755,6 +894,18 @@ document.addEventListener("submit", async (event) => {
   } catch (error) {
     message.textContent = error instanceof Error ? error.message : String(error);
   }
+});
+
+document.addEventListener("input", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const form = target?.closest("[data-device-form]");
+  if (form instanceof HTMLFormElement) updateRulePreview(form);
+});
+
+document.addEventListener("change", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const form = target?.closest("[data-device-form]");
+  if (form instanceof HTMLFormElement) updateRulePreview(form);
 });
 
 refreshButton.addEventListener("click", () => loadDevices(true));

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import pino from "pino";
 import rootLogger from "./logger.js";
 import { validateSettings } from "./store.js";
-import { isBlockedAt } from "./enforcement.js";
+import { isBlockedAt, matchingRule } from "./enforcement.js";
 
 const logger = rootLogger.child({ module: "server" });
 
@@ -87,10 +87,15 @@ export const startServer = ({ roku, store, enforce, eventLog }) => {
     }
     return c.json(
       await store.setSettings(c.req.param("id"), {
-        maxMinutes: body.maxMinutes,
-        blockedWindows: body.blockedWindows,
-        limitBehavior: body.limitBehavior,
-        cooldownMinutes: body.cooldownMinutes ?? 15,
+        ...(body.rules === undefined ? {} : { rules: body.rules }),
+        ...(body.rules === undefined
+          ? {
+              maxMinutes: body.maxMinutes,
+              blockedWindows: body.blockedWindows,
+              limitBehavior: body.limitBehavior,
+              cooldownMinutes: body.cooldownMinutes ?? 15,
+            }
+          : { blockedWindows: [] }),
       }),
     );
   });
@@ -158,27 +163,28 @@ function getSessionSummary(store, id, device, now) {
 
   const settings = store.getSettings(id);
   const active = Boolean(device?.active && device.active.id !== "native-ui");
-  const blocked = isBlockedAt(settings.blockedWindows, now);
+  const rule = matchingRule(settings, now);
+  const blocked = Boolean(rule && isBlockedAt(settings.blockedWindows, now));
   const lockEndsAt = session.lockedUntil ? new Date(session.lockedUntil) : null;
   const lockActive = lockEndsAt && lockEndsAt.getTime() > now.getTime();
   const lockExpired = Boolean(lockEndsAt && !lockActive);
 
   const currentSeconds =
-    !lockExpired && active && !blocked && !lockActive && session.lastObservedAt
+    !lockExpired && active && rule && !blocked && !lockActive && session.lastObservedAt
       ? Math.max(0, (now.getTime() - Date.parse(session.lastObservedAt)) / 1000)
       : 0;
   const totalSeconds = lockExpired ? 0 : Math.floor(session.usedSeconds + currentSeconds);
-  const limitReached = settings.maxMinutes !== null && totalSeconds >= settings.maxMinutes * 60;
+  const limitReached = rule?.maxMinutes !== null && rule && totalSeconds >= rule.maxMinutes * 60;
   const blockEndsAt = blocked ? nextBlockEnd(settings.blockedWindows, now) : null;
   const limitEndsAt = limitReached
-    ? settings.limitBehavior === "cooldown"
+    ? rule?.limitBehavior === "cooldown"
       ? lockActive
         ? lockEndsAt
-        : new Date(now.getTime() + settings.cooldownMinutes * 60_000)
+        : new Date(now.getTime() + rule.cooldownMinutes * 60_000)
       : nextLocalMidnight(now)
     : null;
   const expectedState = lockActive
-    ? settings.limitBehavior === "cooldown"
+    ? rule?.limitBehavior === "cooldown"
       ? "cooldown"
       : "daily_limit"
     : blocked
