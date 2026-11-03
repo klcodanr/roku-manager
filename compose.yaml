@@ -7,10 +7,10 @@ services:
       DATA_FILE: /app/data/state.json
       EVENT_LOG_DIR: /app/data/events
       TZ: ${TZ:-America/New_York}
-      PORT: ${APP_PORT}
+      PORT: ${PORT:-3000}
       AUTH_PASSWORD: ${AUTH_PASSWORD}
       LOG_LEVEL: ${LOG_LEVEL}
-      CHECK_INTERVAL_MS: ${CHECK_INTERVAL_MS}
+      ENFORCEMENT_INTERVAL_MS: ${ENFORCEMENT_INTERVAL_MS}
       MIGRATE_DATA: ${MIGRATE_DATA}
     volumes:
       - roku-manager-data:/app/data
@@ -20,7 +20,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:${APP_PORT}/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:${PORT:-3000}/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3

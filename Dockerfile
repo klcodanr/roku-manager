@@ -1,16 +1,22 @@
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/core/package.json packages/core/package.json
+COPY packages/service/package.json packages/service/package.json
+COPY packages/web/package.json packages/web/package.json
+RUN pnpm install --frozen-lockfile
 
-COPY src ./src
-COPY public ./public
+COPY packages/core packages/core
+COPY packages/service packages/service
+COPY packages/web packages/web
+RUN pnpm --filter @roku-manager/service build
+
 RUN mkdir -p /app/data && chown -R node:node /app
-
 USER node
 VOLUME ["/app/data"]
 EXPOSE 3000
-CMD ["node", "src/app.js"]
+CMD ["node", "packages/service/dist/index.js"]

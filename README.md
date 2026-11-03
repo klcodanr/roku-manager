@@ -1,74 +1,141 @@
 # Roku Manager
 
-A vanilla Node.js application with a Hono API and browser UI for discovering Roku devices, viewing diagnostics, and enforcing daily usage limits and blocked time windows.
+Roku Manager is a self-hosted web app for monitoring Roku devices and enforcing daily usage limits.
 
-## Run locally
+It discovers Roku devices on your local network, shows the currently active app, and can power off or return a device home when a usage rule is reached.
 
-Requires Node.js 22 or newer. Roku devices must have **Control by mobile apps > Network access** enabled.
+## Requirements
+
+- A Roku device on the same local network as Roku Manager
+- **Settings → System → Advanced system settings → Control by mobile apps → Network access** enabled on the Roku
+- Docker on a Linux host, or Node.js 24+ when running directly on the host
+
+Roku discovery uses SSDP multicast. The Roku Manager host must be able to reach the Roku devices on the LAN.
+
+## Run with Docker Compose
+
+1. Download the project and create an environment file:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+2. Set a strong `AUTH_PASSWORD` in `.env`.
+
+3. Start Roku Manager:
+
+   ```sh
+   docker compose up -d
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) and sign in with `AUTH_USER` and `AUTH_PASSWORD`.
+
+The Compose configuration:
+
+- Uses the published image from GitHub Container Registry
+- Uses host networking so SSDP discovery can reach the LAN
+- Persists settings, sessions, and event history in the `roku-manager-data` volume
+- Restarts the service automatically
+- Exposes a health check at `/health`
+
+View logs with:
 
 ```sh
-npm install
+docker compose logs -f
+```
+
+Stop the service with:
+
+```sh
+docker compose down
+```
+
+The data volume is preserved when the service is stopped. Add `-v` to `docker compose down` only if you also want to delete the saved settings and history.
+
+### Docker networking
+
+Host networking is the most reliable option for Roku discovery and works best on Linux. Docker Desktop on macOS and Windows runs containers inside a VM, where multicast discovery may not reach the LAN. If no devices are found, run Roku Manager directly on the host or use a Linux host or VM on the same network.
+
+## Run directly with Node.js
+
+Running directly on the host can be useful on macOS, Windows, or a Linux system where Docker multicast networking is unavailable.
+
+```sh
+pnpm install
+pnpm build
 cp .env.example .env
-npm start
 ```
 
-Open `http://localhost:3000` and authenticate with the values in `.env`. Settings are stored in `data/state.json` by default. If no `.env` or `AUTH_PASSWORD` is provided, local development uses `admin` / `change-me`; set a real password before exposing the service.
-
-## Direct Roku SSDP discovery
-
-The standalone CLI sends a raw SSDP `M-SEARCH` request directly to the LAN multicast address. It does not use the Roku Manager server or its API:
+Set a strong `AUTH_PASSWORD` in `.env`, then start the service:
 
 ```sh
-npm run ssdp
-npm run ssdp -- --json --timeout 10000
-npm run ssdp -- --st ssdp:all --interface en0
+pnpm start
 ```
 
-The default search target is Roku's `roku:ecp`. Use `npm run ssdp -- --help` for all request and network options.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Docker
+When running from the source tree, the default storage paths are inside the service data directory:
 
-The image is based on `node:22-alpine` and runs as the non-root `node` user. Roku SSDP discovery needs access to the local network; host networking is the most reliable option on Linux:
+- `DATA_FILE`: saved devices, settings, and sessions
+- `EVENT_LOG_DIR`: per-device usage and enforcement history
 
-```sh
-docker build -t roku-manager .
-docker run --rm --network host \
-  -e AUTH_USER=admin \
-  -e AUTH_PASSWORD='use-a-long-password' \
-  -v roku-manager-data:/app/data \
-  roku-manager
+For a different location, set both paths in `.env`, for example:
+
+```dotenv
+DATA_FILE=/var/lib/roku-manager/state.json
+EVENT_LOG_DIR=/var/lib/roku-manager/events
 ```
 
-On Docker Desktop, publish port `3000` and ensure the container can reach the LAN multicast/broadcast network. See `.env.example` for all settings.
+## Configuration
 
-### Docker Compose
+The most useful settings are:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` | HTTP port |
+| `AUTH_USER` | `admin` | Basic Auth username |
+| `AUTH_PASSWORD` | `change-me` | Basic Auth password; change this before exposing the service |
+| `DATA_FILE` | Service `data/state.json` | Persistent application state |
+| `EVENT_LOG_DIR` | Service `data/events` | Persistent event history |
+| `DISCOVERY_INTERVAL_MS` | `21600000` | Device rediscovery interval; 6 hours |
+| `ENFORCEMENT_INTERVAL_MS` | `15000` | Usage enforcement interval; 15 seconds |
+| `ENFORCEMENT_RECHECK_DELAY_MS` | `1000` | Delay before retrying an enforcement action |
+| `ENFORCEMENT_RECHECK_ATTEMPTS` | `3` | Maximum enforcement retries |
+| `TZ` | System time zone | Time zone used by the container/runtime |
+
+See `.env.example` for the complete list of available variables.
+
+## Updating
+
+Pull the latest image and recreate the container:
 
 ```sh
-cp .env.example .env
-# Set AUTH_PASSWORD in .env before exposing the service.
+docker compose pull
 docker compose up -d
 ```
 
-The Compose service pulls `ghcr.io/klcodanr/roku-manager:latest`, uses host networking so SSDP discovery can reach Roku devices on the LAN, stores application data in the `roku-manager-data` volume, restarts automatically, and includes a health check. Open `http://localhost:3000`. Stop it with `docker compose down`; add `-v` only when you also want to remove the persisted data.
+Your data remains in the `roku-manager-data` volume.
 
-Host networking is supported reliably on Linux. Docker Desktop runs containers inside a VM, and its multicast behavior varies by version and configuration; if discovery still returns no devices on macOS or Windows, run the manager directly on the host or use a Linux host/VM on the same LAN. The default bridge network is not sufficient for Roku SSDP discovery.
+## Troubleshooting
 
-Releases are created automatically from commits pushed to `main` using semantic-release. Use Conventional Commit prefixes such as `fix:` for patch releases, `feat:` for minor releases, and `BREAKING CHANGE:` for major releases. Each release publishes a versioned image and updates the `latest` image in GHCR.
+### No Roku devices appear
 
-## API
+- Confirm the Roku and Roku Manager are on the same LAN.
+- Enable **Network access** under the Roku mobile-app settings.
+- On Linux, confirm the host firewall allows SSDP multicast traffic.
+- If using Docker Desktop, try running directly on the host or on a Linux machine.
+- Add a device manually by IP from the Devices screen if discovery is unavailable.
 
-All API routes use HTTP Basic Authentication.
+### A device is offline
 
-- `GET /health` returns an unauthenticated liveness response.
-- `GET /api/devices` returns device diagnostics and active app information. Add `?refresh=true` to trigger an SSDP scan first.
-- `POST /api/devices` accepts `{ "ip": "192.168.1.17" }` to add a Roku directly without SSDP.
-- `GET /api/devices` returns device diagnostics and active app information. Add `?refresh=true` to trigger an SSDP scan first.
-- `GET /api/devices/:id/settings` returns saved policy settings.
-- `GET /api/devices/:id/events` returns the latest 10 event-log records for a device plus cached, server-computed metrics and a compact usage series covering the full retained history, including rotated files.
-- `PUT /api/devices/:id/settings` accepts `{ "rules": [{ "name": "School nights", "days": [1, 2, 3, 4, 5], "start": "15:00", "end": "21:00", "maxMinutes": 120, "limitBehavior": "rest_of_day", "cooldownMinutes": 15 }] }`. Rules are evaluated in array order and the first matching rule is applied.
-- `DELETE /api/devices/:id/settings` resets the device policy and clears persisted daily usage and lockout state.
-- `POST /api/enforce` immediately checks all discovered devices and powers off active devices that are in a blocked window or have reached their daily limit.
+Roku Manager keeps known devices and their settings even when a Roku is temporarily unreachable. Check the Roku’s IP address and network connection, then refresh the device list.
 
-Known Roku devices and their current IP addresses are persisted. Enforcement queries those IPs directly. A failed direct query triggers an SSDP recovery scan, while the background scan runs every `DISCOVERY_INTERVAL_MS` milliseconds (default 6 hours). Users can also add a device by IP with `POST /api/devices`. The scheduler runs enforcement every `CHECK_INTERVAL_MS` milliseconds, defaulting to 15 seconds. After a device is enforced, it is rechecked up to three times at one-second intervals by default; configure `ENFORCEMENT_RECHECK_DELAY_MS` and `ENFORCEMENT_RECHECK_ATTEMPTS` to change this behavior. On-time is accumulated across active periods and persisted by local calendar day. Reaching a limit locks the device either until the next local midnight (`rest_of_day`) or for `cooldownMinutes` (`cooldown`). The lockout remains persisted and is checked on every enforcement pass; failed power-off requests are retried. Usage resets at local midnight.
+### Health check
 
-Each enforcement check also appends one JSON Lines event per device to its own file under `EVENT_LOG_DIR`, which defaults to `data/events` and is separate from `DATA_FILE`. Settings, sessions, and event records are associated with the stable Roku `deviceId`, while the network `clientId` is used only to locate and control the current IP address. To migrate existing IP-keyed state and events, set `MIGRATE_DATA=DEVICE_IDS` for startup. Device filenames use a URL-safe encoding of the storage device ID. Events include the timestamp, device ID, active state, current app name, enforcement status, enforcement event, usage, and lock expiry. Each device log rotates when it reaches `EVENT_LOG_MAX_BYTES` (10 MiB by default) and retains `EVENT_LOG_MAX_FILES` rotated files (3 by default), plus the active file. Storage is therefore bounded per device to approximately 40 MiB by default, plus a possible final event larger than the configured limit.
+The unauthenticated health endpoint can be used by monitoring systems:
+
+```sh
+curl http://localhost:3000/health
+```
+
+It returns `{ "ok": true }` when the service is running.
