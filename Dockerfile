@@ -5,6 +5,7 @@ ENV NODE_ENV=production
 
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY tsconfig*.json vite.config.ts ./
 COPY packages/core/package.json packages/core/package.json
 COPY packages/service/package.json packages/service/package.json
 COPY packages/web/package.json packages/web/package.json
