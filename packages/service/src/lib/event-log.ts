@@ -81,7 +81,15 @@ export class EventLog {
   }
 
   async readEvents({ deviceId, dayLimit = 30 }: { deviceId: string; dayLimit: number }) {
-    const files = await readdir(this.directory);
+    let files: string[];
+    try {
+      files = await readdir(this.directory);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        return [];
+      }
+      throw err;
+    }
 
     const events: EnforcementEvent[] = [];
     const deviceFiles = await Promise.all(
@@ -91,7 +99,13 @@ export class EventLog {
         )
         .map((file) => this.cache.fetch(file)),
     );
-    events.push(...deviceFiles.flat().filter((e) => e !== undefined));
+    for (const fileEvents of deviceFiles) {
+      for (const event of fileEvents) {
+        if (event !== undefined) {
+          events.push(event);
+        }
+      }
+    }
     return events;
   }
 }
