@@ -40,7 +40,9 @@ export function HistoryCharts({ history }: { history: EventsSummary }) {
       date.setHours(0, 0, 0, 0);
       const timestamp = date.getTime();
       const counts = dailyResults.get(timestamp) ?? { failed: 0, none: 0, succeeded: 0 };
-      counts[event.enforcementStatus] += 1;
+      counts.failed += event.statusCounts.failed;
+      counts.none += event.statusCounts.none;
+      counts.succeeded += event.statusCounts.succeeded;
       dailyResults.set(timestamp, counts);
     }
     const cumulativeResults = [...dailyResults.entries()].sort(([dateA], [dateB]) => dateA - dateB);

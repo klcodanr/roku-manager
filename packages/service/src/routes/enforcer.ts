@@ -10,6 +10,7 @@ import type { Enforcer } from "../lib/enforcer.js";
 import type { EventLog } from "../lib/event-log.js";
 import type { RokuService } from "../lib/roku.js";
 import type { Store } from "../lib/store.js";
+import { summarizeEventSeries } from "../lib/event-history.js";
 
 export const registerEnforcerRoutes = ({
   app,
@@ -184,11 +185,7 @@ export const registerEnforcerRoutes = ({
             );
           })
           .slice(-10),
-        series: events.map((event) => ({
-          timestamp: event.timestamp,
-          usedMinutes: event.usedMinutes,
-          enforcementStatus: event.enforcementStatus,
-        })),
+        series: summarizeEventSeries(events),
       };
       return c.json(summary, 200);
     },

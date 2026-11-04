@@ -140,6 +140,11 @@ export const eventsSummarySchema = z.object({
       timestamp: isoDatetimeToDate,
       usedMinutes: z.number(),
       enforcementStatus: z.enum(["failed", "none", "succeeded"]),
+      statusCounts: z.object({
+        failed: z.number(),
+        none: z.number(),
+        succeeded: z.number(),
+      }),
     }),
   ),
   recent: z.array(enforcementEventSchema).max(10),
