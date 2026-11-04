@@ -93,6 +93,7 @@ The most useful settings are:
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `3000` | HTTP port |
+| `DISABLE_AUTH` | `false` | Set to `true` to disable Basic Auth; only use on a trusted network |
 | `AUTH_USER` | `admin` | Basic Auth username |
 | `AUTH_PASSWORD` | `change-me` | Basic Auth password; change this before exposing the service |
 | `DATA_FILE` | Service `data/state.json` | Persistent application state |

@@ -21,17 +21,25 @@ export const startServer = ({
   store,
   enforcer,
   eventLog,
+  auth,
 }: {
   roku: RokuService;
   store: Store;
   enforcer: Enforcer;
   eventLog: EventLog;
+  auth: {
+    DISABLE_AUTH: boolean;
+    AUTH_USER: string;
+    AUTH_PASSWORD: string;
+  };
 }) => {
   const app = new OpenAPIHono();
-  const username = process.env.AUTH_USER || "admin";
-  const password = process.env.AUTH_PASSWORD || "change-me";
+  const username = auth.AUTH_USER;
+  const password = auth.AUTH_PASSWORD;
 
-  if (!process.env.AUTH_PASSWORD) {
+  if (auth.DISABLE_AUTH) {
+    logger.warn("DISABLE_AUTH is enabled; Basic Auth is disabled");
+  } else if (!auth.AUTH_PASSWORD) {
     logger.warn("AUTH_PASSWORD is not set; using the development password change-me");
   }
 
@@ -55,7 +63,9 @@ export const startServer = ({
   });
 
   app.use("*", async (c, next) => {
-    if (c.req.path === "/health") return next();
+    if (auth.DISABLE_AUTH || c.req.path === "/health") {
+      return next();
+    }
     const header = c.req.header("authorization") || "";
     const expected = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
     if (header !== expected) {
