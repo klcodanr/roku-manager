@@ -12,6 +12,13 @@ const config = z.object({
   ENFORCEMENT_RECHECK_ATTEMPTS: z.coerce.number().default(3),
   EVENT_LOG_DIR: z.string().default(join(root, "data", "events")),
   DATA_FILE: z.string().default(join(root, "data", "state.json")),
+
+  DISABLE_AUTH: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  AUTH_USER: z.string().default(process.env.AUTH_USER || "admin"),
+  AUTH_PASSWORD: z.string().default(process.env.AUTH_PASSWORD || "change-me"),
 });
 
 export const loadEnv = () => {

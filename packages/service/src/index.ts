@@ -26,7 +26,7 @@ const enforcer = new Enforcer({
 const stopDiscovery = roku.startBackgroundDiscovery(env.DISCOVERY_INTERVAL_MS);
 const stopEnforcement = enforcer.startBackgroundEnforcement(env.ENFORCEMENT_INTERVAL_MS);
 
-startServer({ roku, store, enforcer, eventLog });
+startServer({ roku, store, enforcer, eventLog, auth: env });
 
 const shutdown = async () => {
   stopEnforcement();

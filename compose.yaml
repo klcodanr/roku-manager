@@ -8,6 +8,7 @@ services:
       EVENT_LOG_DIR: /app/data/events
       TZ: ${TZ:-America/New_York}
       PORT: ${PORT:-3000}
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
       AUTH_PASSWORD: ${AUTH_PASSWORD}
       LOG_LEVEL: ${LOG_LEVEL}
       ENFORCEMENT_INTERVAL_MS: ${ENFORCEMENT_INTERVAL_MS}
