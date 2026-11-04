@@ -8,11 +8,11 @@ services:
       EVENT_LOG_DIR: /app/data/events
       TZ: ${TZ:-America/New_York}
       PORT: ${PORT:-3000}
-      DISABLE_AUTH: ${DISABLE_AUTH:-false}
-      AUTH_PASSWORD: ${AUTH_PASSWORD}
-      LOG_LEVEL: ${LOG_LEVEL}
-      ENFORCEMENT_INTERVAL_MS: ${ENFORCEMENT_INTERVAL_MS}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENFORCEMENT_INTERVAL_MS: ${ENFORCEMENT_INTERVAL_MS:-15000}
       MIGRATE_DATA: ${MIGRATE_DATA}
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-change-me}
     volumes:
       - roku-manager-data:/app/data
     restart: unless-stopped
