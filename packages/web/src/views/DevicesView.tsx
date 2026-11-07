@@ -2,37 +2,20 @@ import { useState } from "preact/hooks";
 import { useMutation, useQueryClient } from "@tanstack/preact-query";
 import { addDevice } from "../api";
 import { DeviceCard } from "../components/DeviceCard";
-import type { RokuDevice } from "@roku-manager/core";
+import { useDevices } from "../hooks/useDevices";
 
-export function DevicesView({
-  devices,
-  onRefresh,
-}: {
-  devices: RokuDevice[];
-  onRefresh: () => void;
-}) {
+export function DevicesView() {
+  const { devices, reload: onRefresh } = useDevices();
   const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
+  const [ip, setIp] = useState("");
   const addDeviceMutation = useMutation({
     mutationFn: addDevice,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devices"] });
     },
   });
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement;
-    const ip = new FormData(form).get("ip")?.toString().trim() || "";
-    setMessage("Adding...");
-    try {
-      await addDeviceMutation.mutateAsync(ip);
-      form.reset();
-      setMessage("");
-      onRefresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    }
-  }
+
   return (
     <>
       <div className="mb-6">
@@ -54,7 +37,18 @@ export function DevicesView({
         </section>
       )}
       <form
-        onSubmit={submit}
+        onSubmit={async (event: SubmitEvent) => {
+          event.preventDefault();
+          setMessage("Adding...");
+          try {
+            await addDeviceMutation.mutateAsync(ip);
+            (event.currentTarget as HTMLFormElement).reset();
+            setMessage("");
+            onRefresh();
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : String(error));
+          }
+        }}
         className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-900/5"
       >
         <h2 className="mb-4 text-xl font-bold">Add a device by IP</h2>
@@ -66,6 +60,7 @@ export function DevicesView({
             type="text"
             placeholder="192.168.1.17"
             required
+            onChange={(e) => setIp((e.target as HTMLInputElement).value)}
           />
         </label>
         <div className="mt-5 flex items-center gap-4">

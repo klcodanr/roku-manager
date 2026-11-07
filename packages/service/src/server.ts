@@ -87,11 +87,9 @@ export const startServer = ({
   registerSettingsRoutes({ app, store });
   registerEnforcerRoutes({ app, store, roku, enforcer, eventLog });
 
-  // Serve the built web app and its assets. The web app uses hash routing, so
-  // an explicit root route is enough and avoids returning index.html for
-  // JavaScript and CSS requests.
+  // Serve assets normally and fall back to the app shell for client-side routes.
   app.get("/assets/*", serveStatic({ root: publicRoot }));
-  app.get("/", serveStatic({ root: publicRoot, path: "/index.html" }));
+  app.get("*", serveStatic({ root: publicRoot, path: "/index.html" }));
   serve({ fetch: app.fetch, port: Number(process.env.PORT || 3000) }, (info) =>
     logger.info({ port: info.port }, "Roku Manager server started"),
   );

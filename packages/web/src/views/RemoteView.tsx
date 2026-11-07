@@ -17,9 +17,9 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-preact";
-import type { RokuDevice } from "@roku-manager/core";
 import { getApps, launchApp, sendRemoteCommand, type RemoteCommand } from "../api";
 import { deviceName, isAvailable } from "../utils";
+import { useDevices } from "../hooks/useDevices";
 
 const commands = {
   home: "Home",
@@ -45,7 +45,8 @@ const commands = {
   inputHdmi4: "HDMI 4",
 } satisfies Record<RemoteCommand, string>;
 
-export function RemoteView({ devices }: { devices: RokuDevice[] }) {
+export function RemoteView() {
+  const { devices } = useDevices();
   const [selectedId, setSelectedId] = useState(devices[0]?.deviceId ?? "");
   const selected = devices.find((device) => device.deviceId === selectedId) ?? devices[0];
   const selectedAvailable = selected && isAvailable(selected) ? selected : null;

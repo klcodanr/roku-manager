@@ -1,5 +1,5 @@
-import type { RokuDevice } from "@roku-manager/core";
 import { deviceName } from "../utils";
+import { useManageDevice } from "../hooks/useManageDevice";
 
 function labelFor(key: string) {
   return key
@@ -55,7 +55,10 @@ function DiagnosticEntry({ label, value }: { label: string; value: unknown }) {
   );
 }
 
-export function DiagnosticsView({ device }: { device: RokuDevice }) {
+export function DiagnosticsView({ deviceId }: { deviceId: string }) {
+  const { device } = useManageDevice(deviceId);
+  if (!device) return null;
+
   const entries = Object.entries(device);
   const topLevelValues = entries.filter(([, value]) => value === null || typeof value !== "object");
   const nestedValues = entries.filter(([, value]) => value !== null && typeof value === "object");

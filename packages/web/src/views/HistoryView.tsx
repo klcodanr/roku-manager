@@ -1,11 +1,15 @@
 import { useState } from "preact/hooks";
-import type { RokuDevice } from "@roku-manager/core";
 import { History } from "../components/History";
+import { RouteLoading } from "../components/RouteStatus";
 import { useDeviceHistory } from "../hooks/useDeviceHistory";
+import { useManageDevice } from "../hooks/useManageDevice";
 
-export function HistoryView({ device }: { device: RokuDevice }) {
+export function HistoryView({ deviceId }: { deviceId: string }) {
+  const { device } = useManageDevice(deviceId);
   const [dayLimit, setDayLimit] = useState(7);
-  const { history, loading, error } = useDeviceHistory(device.deviceId, dayLimit);
+  const { history, loading, error } = useDeviceHistory(device?.deviceId ?? "", dayLimit);
+
+  if (!device) return null;
 
   return (
     <>
@@ -28,9 +32,7 @@ export function HistoryView({ device }: { device: RokuDevice }) {
         </select>
       </div>
       {loading ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          Loading history...
-        </section>
+        <RouteLoading message="Loading history..." />
       ) : error ? (
         <section className="rounded-2xl border border-red-200 bg-white p-5">
           <h2 className="text-xl font-bold">Unable to load history</h2>
