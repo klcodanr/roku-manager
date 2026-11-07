@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@roku-manager/core": "workspace:*",
-    "@tanstack/preact-query": "^5.105.2",
+    "@tanstack/preact-query": "^5.105.3",
     "@tanstack/preact-store": "^0.13.5",
     "chart.js": "^4.6.1",
     "lucide-preact": "^1.66.0",
