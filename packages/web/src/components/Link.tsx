@@ -10,7 +10,7 @@ export function Link({
   className?: string;
 }) {
   return (
-    <a className={className} href={`#${href}`}>
+    <a className={className} href={href.startsWith("#") ? href : `#${href}`}>
       {children}
     </a>
   );

@@ -10,13 +10,13 @@ export function useDevices() {
   });
 
   const reload = useCallback(
-    (refresh = false) =>
-      refresh
-        ? queryClient.fetchQuery({
-            queryKey: ["devices"],
-            queryFn: () => getDevices(true),
-          })
-        : query.refetch(),
+    async (refresh = false) => {
+      if (refresh) {
+        await queryClient.fetchQuery({ queryKey: ["devices"], queryFn: () => getDevices(true) });
+      } else {
+        await query.refetch();
+      }
+    },
     [query.refetch, queryClient],
   );
 
