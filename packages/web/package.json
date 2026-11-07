@@ -28,10 +28,10 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.4",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.4",
     "typescript": "catalog:",
     "vite": "catalog:"
   }
