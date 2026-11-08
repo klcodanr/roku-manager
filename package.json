@@ -8,7 +8,7 @@
   "scripts": {
     "build": "pnpm --filter @roku-manager/service build",
     "start": "pnpm --filter @roku-manager/service start",
-    "dev": "pnpm --filter roku-manager-web build && pnpm --parallel --filter roku-manager-web --filter @roku-manager/service dev",
+    "dev": "pnpm --filter roku-manager-web build -- --mode development && pnpm --parallel --filter roku-manager-web --filter @roku-manager/service dev",
     "test": "pnpm -r --if-present test",
     "lint": "pnpm -r --if-present lint",
     "format": "pnpm -r --if-present format",

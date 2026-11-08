@@ -262,17 +262,19 @@ export function RemoteView() {
             <p className="text-sm font-bold text-slate-600">Apps</p>
             <div className="flex gap-2">
               <select
-                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white p-3 py-2 text-sm"
                 value={appId}
                 onChange={(event) => setAppId((event.currentTarget as HTMLSelectElement).value)}
                 disabled={remoteDisabled || appsQuery.isPending}
               >
                 <option value="">Select an installed app</option>
-                {appsQuery.data?.apps.map((app) => (
-                  <option value={app.id} key={app.id}>
-                    {app.name}
-                  </option>
-                ))}
+                {appsQuery.data?.apps
+                  .sort((a1, a2) => a1.name.localeCompare(a2.name))
+                  .map((app) => (
+                    <option value={app.id} key={app.id}>
+                      {app.name}
+                    </option>
+                  ))}
               </select>
               <button
                 type="button"

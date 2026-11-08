@@ -7,7 +7,7 @@ export function RouteLoading({ message = "Loading..." }: { message?: string }) {
       role="status"
       aria-live="polite"
     >
-      <LoaderCircle className="h-5 w-5 animate-spin text-blue-700" aria-hidden="true" />
+      <LoaderCircle className="h-10 w-10 animate-spin text-blue-700" aria-hidden="true" />
       <span>{message}</span>
     </section>
   );

@@ -9,16 +9,10 @@ export function useDevices() {
     queryFn: () => getDevices(),
   });
 
-  const reload = useCallback(
-    async (refresh = false) => {
-      if (refresh) {
-        await queryClient.fetchQuery({ queryKey: ["devices"], queryFn: () => getDevices(true) });
-      } else {
-        await query.refetch();
-      }
-    },
-    [query.refetch, queryClient],
-  );
+  const reload = useCallback(() => {
+    queryClient.resetQueries();
+    queryClient.query({ queryKey: ["devices"], queryFn: () => getDevices(true) }).then(console.log);
+  }, [queryClient]);
 
   return {
     devices: query.data?.devices ?? [],
