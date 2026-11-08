@@ -79,7 +79,7 @@ export class RokuService {
         try {
           return await this.details(client);
         } catch (error) {
-          logger.warn({ err: error, ...known }, "Unable to query Roku device");
+          logger.warn({ err: error, device: known.deviceId }, "Unable to query Roku device");
           return {
             ...known,
             online: false as const,

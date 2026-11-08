@@ -3,10 +3,10 @@ import { useHashLocation } from "wouter-preact/use-hash-location";
 import { Link } from "./components/Link";
 import { RouteLoading } from "./components/RouteStatus";
 import { useDevices } from "./hooks/useDevices";
-import { useServerTime } from "./hooks/useServerTime";
 import { DevicesView } from "./views/DevicesView";
 import { ManageView } from "./views/ManageView";
 import { RemoteView } from "./views/RemoteView";
+import { Footer } from "./components/Footer";
 
 function NotFound() {
   return (
@@ -19,7 +19,6 @@ function NotFound() {
 
 export function App() {
   const { loading, error, reload: reloadDevices } = useDevices();
-  const serverTime = useServerTime();
 
   return (
     <Router hook={useHashLocation}>
@@ -65,9 +64,7 @@ export function App() {
             <Route component={NotFound} />
           </Switch>
         )}
-        <footer className="mt-7 text-center text-xs text-slate-500" aria-live="polite">
-          {serverTime}
-        </footer>
+        <Footer />
       </main>
     </Router>
   );

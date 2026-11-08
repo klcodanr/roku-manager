@@ -6,9 +6,11 @@ import { useDeviceDetails } from "../hooks/useDeviceDetails";
 import { useManageDevice } from "../hooks/useManageDevice";
 import { isAvailable } from "../utils";
 import { RouteError, RouteLoading } from "../components/RouteStatus";
+import { useDevices } from "../hooks/useDevices";
 
 export function SessionView({ deviceId }: { deviceId: string }) {
-  const { device, reloadDevices } = useManageDevice(deviceId);
+  const { reload: reloadDevices } = useDevices();
+  const { device } = useManageDevice(deviceId);
   const availableDevice = device && isAvailable(device) ? device : null;
   const { details, loading, error, reload } = useDeviceDetails(
     availableDevice?.deviceId ?? null,
@@ -47,7 +49,7 @@ export function SessionView({ deviceId }: { deviceId: string }) {
     try {
       await enforcementMutation.mutateAsync();
       reload();
-      reloadDevices(true);
+      reloadDevices();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     }
