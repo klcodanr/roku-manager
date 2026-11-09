@@ -131,8 +131,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@tanstack/preact-query':
-        specifier: ^5.105.2
-        version: 5.105.2(preact@11.1.1)
+        specifier: ^5.107.0
+        version: 5.107.0(preact@11.1.1)
       chart.js:
         specifier: ^4.6.1
         version: 4.6.1
@@ -1042,13 +1042,13 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/preact-query@5.105.2':
-    resolution: {integrity: sha512-aijAVu6GnPAmXMUt/NFwoAY9fUIzmkH6KM+P3+7LNW1JihmZ5S2swvax7DjBF9FcfHPIRWul1AKs9WYDncTekA==}
+  '@tanstack/preact-query@5.107.0':
+    resolution: {integrity: sha512-qiado4ynYABEI3+c2gV/D3QSZrfH2AnpyWSXscali6bdZQIH4UwObMDgSGGNhSs348tmj5QTXrgvQtqtnWQw0A==}
     peerDependencies:
       preact: ^10.0.0 || ^11.0.0-0
 
-  '@tanstack/query-core@5.105.2':
-    resolution: {integrity: sha512-cyZGOtI1ZZ79mm905PJ42ng43Mwbc9CeqB83XuJmj9ADj/C+dzUXcgMQucRQ8yZs7atHykMzqavAXXhjxAw50g==}
+  '@tanstack/query-core@5.107.0':
+    resolution: {integrity: sha512-QrobCJilIr2futzukm0E9w/j7fEGweTNZL0cBJDTV0ek1PeNE32XqzQHUxqKc6grb9OxUZt6tz27lgu5fchK0w==}
 
   '@types/estree@1.0.10':
     resolution: {integrity: sha512-lTyOMnOcmRBzdCv6/4zUZCrEhV0xrqQiUZBZtVcbmLHBXKLnN8q89v/wKRF/Q0HbwVsqbIG3o5HDoFl9sduM+g==}
@@ -1195,8 +1195,8 @@ packages:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
-  ansi-regex@6.5.0:
-    resolution: {integrity: sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ==}
+  ansi-regex@6.6.0:
+    resolution: {integrity: sha512-XZ5apbzreCbXSKwPjJstu8R0zOi247w3XYwWxtwBXgpZrCyc1Ka7p9/xY0A9/diMewmHbEKz+FIraWaEWjlN5g==}
     engines: {node: '>=12'}
 
   ansi-styles@3.2.1:
@@ -3538,12 +3538,12 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
-  '@tanstack/preact-query@5.105.2(preact@11.1.1)':
+  '@tanstack/preact-query@5.107.0(preact@11.1.1)':
     dependencies:
-      '@tanstack/query-core': 5.105.2
+      '@tanstack/query-core': 5.107.0
       preact: 11.1.1(preact-render-to-string@6.8.2)
 
-  '@tanstack/query-core@5.105.2': {}
+  '@tanstack/query-core@5.107.0': {}
 
   '@types/estree@1.0.10': {}
 
@@ -3626,7 +3626,7 @@ snapshots:
 
   ansi-regex@5.0.1: {}
 
-  ansi-regex@6.5.0: {}
+  ansi-regex@6.6.0: {}
 
   ansi-styles@3.2.1:
     dependencies:
@@ -4313,7 +4313,7 @@ snapshots:
   marked-terminal@7.3.1(marked@15.0.12):
     dependencies:
       ansi-escapes: 7.3.0
-      ansi-regex: 6.5.0
+      ansi-regex: 6.6.0
       chalk: 5.6.2
       cli-highlight: 2.1.11
       cli-table3: 0.6.5
@@ -4820,7 +4820,7 @@ snapshots:
 
   strip-ansi@7.2.0:
     dependencies:
-      ansi-regex: 6.5.0
+      ansi-regex: 6.6.0
 
   strip-bom@3.0.0: {}
 
