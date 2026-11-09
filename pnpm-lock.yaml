@@ -85,8 +85,8 @@ importers:
         specifier: 0.10.3
         version: 0.10.3(hono@4.13.16)(pino@10.4.0)
       hono-problem-details:
-        specifier: ^0.12.0
-        version: 0.12.0(@hono/zod-openapi@1.6.3(hono@4.13.16)(zod@4.6.7))(hono@4.13.16)(zod@4.6.7)
+        specifier: ^0.12.2
+        version: 0.12.2(@hono/zod-openapi@1.6.3(hono@4.13.16)(zod@4.6.7))(hono@4.13.16)(zod@4.6.7)
       lru-cache:
         specifier: ^11.5.3
         version: 11.5.3
@@ -1195,8 +1195,8 @@ packages:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
-  ansi-regex@6.5.0:
-    resolution: {integrity: sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ==}
+  ansi-regex@6.6.0:
+    resolution: {integrity: sha512-XZ5apbzreCbXSKwPjJstu8R0zOi247w3XYwWxtwBXgpZrCyc1Ka7p9/xY0A9/diMewmHbEKz+FIraWaEWjlN5g==}
     engines: {node: '>=12'}
 
   ansi-styles@3.2.1:
@@ -1614,8 +1614,8 @@ packages:
       hono: '>=4.0.0'
       pino: '>=7.1.0'
 
-  hono-problem-details@0.12.0:
-    resolution: {integrity: sha512-/0YShwyOSWOqS5vJ66/42pC1krxFPviVSIFuCe2vvCszKnDgslaCR6QEtDOmhB4jeJ5ld5FPeeB8NxtKrMRhWw==}
+  hono-problem-details@0.12.2:
+    resolution: {integrity: sha512-wO7po6UgmLiP0pcK/LSw0RzkLfOqYmJghJTogUrYtRjgpsMcljd4ktm2VGWEyzkZTPjb6V2qpjyZMTz9ow/jzg==}
     engines: {node: '>=22'}
     peerDependencies:
       '@hono/standard-validator': ^0.2.0
@@ -3626,7 +3626,7 @@ snapshots:
 
   ansi-regex@5.0.1: {}
 
-  ansi-regex@6.5.0: {}
+  ansi-regex@6.6.0: {}
 
   ansi-styles@3.2.1:
     dependencies:
@@ -4041,7 +4041,7 @@ snapshots:
       hono: 4.13.16
       pino: 10.4.0
 
-  hono-problem-details@0.12.0(@hono/zod-openapi@1.6.3(hono@4.13.16)(zod@4.6.7))(hono@4.13.16)(zod@4.6.7):
+  hono-problem-details@0.12.2(@hono/zod-openapi@1.6.3(hono@4.13.16)(zod@4.6.7))(hono@4.13.16)(zod@4.6.7):
     dependencies:
       hono: 4.13.16
     optionalDependencies:
@@ -4313,7 +4313,7 @@ snapshots:
   marked-terminal@7.3.1(marked@15.0.12):
     dependencies:
       ansi-escapes: 7.3.0
-      ansi-regex: 6.5.0
+      ansi-regex: 6.6.0
       chalk: 5.6.2
       cli-highlight: 2.1.11
       cli-table3: 0.6.5
@@ -4820,7 +4820,7 @@ snapshots:
 
   strip-ansi@7.2.0:
     dependencies:
-      ansi-regex: 6.5.0
+      ansi-regex: 6.6.0
 
   strip-bom@3.0.0: {}
 
